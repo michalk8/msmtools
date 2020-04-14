@@ -42,16 +42,17 @@ def _find_twoblocks(R):
     """
     This function checks the sorted part of the Schurform `R` for 2x2-blocks. 
     If a 2x2-block (corresponding to two complex conjugate eigenvalues, that MUST NOT be splitted) 
-    at positions (rr_i;i, rr_i;i+1, rr_i+1;i, rr_i+1;i+1) is found, the row-index i of the first row 
-    of the 2x2-block is identified as invalid row-index and n_cluster = i+1 is excluded from 
-    the array of valid cluster numbers that is returned by this function.
+    at positions (``rr_i;i``, ``rr_i;i+1``, ``rr_i+1;i``, ``rr_i+1;i+1``) is found, the row-index ``i`
+    of the first row of the 2x2-block is identified as invalid row-index and ``n_cluster = i+1``
+    is excluded from the array of valid cluster numbers that is returned by this function.
     
     Parameters
     ----------
     R : ndarray (n,n)
         (Partially) sorted real Schur matrix of
         :math:`\tilde{P} = \mathtt{diag}(\sqrt{\eta}) P \mathtt{diag}(1.0. / \sqrt{eta})`
-        such that :math:`\tilde{P} Q = Q R` with the (partially) sorted matrix of Schur vectors `Q` holds.
+        such that :math:`\tilde{P} Q = Q R` with the (partially) sorted matrix 
+        of Schur vectors :math:`Q` holds.
         
     Returns
     -------
@@ -72,7 +73,7 @@ def _gram_schmidt_mod(Q, eta):
     Parameters
     ----------
     Q : ndarray (n,n)
-        (n,n)-matrix consisting columnwise of the Schur vectors of 
+        Matrix consisting columnwise of the Schur vectors of 
         :math:`\tilde{P} = \mathtt{diag}(\sqrt{\eta}) P \mathtt{diag}(1.0. / \sqrt{eta})`.
         
     eta : ndarray (n,) 
@@ -81,7 +82,7 @@ def _gram_schmidt_mod(Q, eta):
     Returns
     -------
     Q : ndarray (n,n)
-        (n,n)-matrix with orthonormalized  Schur vectors of :math:`\tilde{P}` and a constant 
+        Matrix with orthonormalized  Schur vectors of :math:`\tilde{P}` and a constant 
         vector with elements equal :math:`\sqrt{eta}` on the first column.
     
     """
@@ -137,20 +138,20 @@ def _gram_schmidt_mod(Q, eta):
 
 def _do_schur(P, eta, m):
     """
-    This function performs a Schur decomposition of the (n x n) transition matrix `P`, with due regard 
-    to the input (initial) distribution of states `eta` (which can be the stationary distribution `pi`,
+    This function performs a Schur decomposition of the (n,n) transition matrix `P`, with due regard 
+    to the input (initial) distribution of states `eta` (which can be the stationary distribution ``pi``,
     if a reversible matrix `P` is considered, or some initial (even arbitrarily choosen, e.g., uniform) 
-    or average distribution of the n states, if a nonreversible `P` is evaluated). 
-    Afterwards the Schur form and Schur vector matrix are sorted (sorting the m dominant (largest) 
+    or average distribution of the `m` states, if a nonreversible `P` is evaluated). 
+    Afterwards the Schur form and Schur vector matrix are sorted (sorting the `m` dominant (largest) 
     eigenvalues to the top left of the Schur form in descending order and correspondingly sorting 
     the associated Schur vectors to the left of the Schur vector matrix).
-    Only the top left (m x m) part of the sorted Schur form and the associated left (n x m) part
+    Only the top left (m,m) part of the sorted Schur form and the associated left (n,m) part
     of the correspondingly sorted Schur vector matrix are returned.
     
     Parameters
     ----------
     P : ndarray (n,n)          
-        Stochastic (fine) transition (n x n)-matrix.
+        Row-stochastic transition matrix.
         
     eta : ndarray (n,)         
         Input (initial) distribution of states.
@@ -161,9 +162,9 @@ def _do_schur(P, eta, m):
     Returns
     -------
     X : ndarray (n,m)
-        (n x m)-matrix containing the ordered `m` dominant Schur vectors columnwise.
-    R : ndarray (n,n)
-        The ordered top left (m x m) Schur form.
+        Matrix containing the ordered `m` dominant Schur vectors columnwise.
+    R : ndarray (m,m)
+        The ordered top left Schur form.
     
     """
     
@@ -233,7 +234,7 @@ def _objective(alpha, X):
     Parameters
     ----------
     alpha : ndarray ((m-1)^2,)
-        Vector containing the flattened croped rotation matrix `rot_matrix[1:,1:]`.
+        Vector containing the flattened croped rotation matrix ``rot_matrix[1:,1:]``.
         
     X : ndarray (n,m)
         A matrix with m sorted Schur vectors in the columns. The constant Schur vector should be first.
@@ -241,14 +242,14 @@ def _objective(alpha, X):
     Returns
     -------
     optval : float (double)
-        Current value of the objective function :math: `f = m - trace(S)` (Eq. 16 from [1]).
+        Current value of the objective function :math:`f = m - trace(S)` (Eq. 16 from [1]_).
         
     References
     ----------
-    [1] S. Roeblitz and M. Weber, Fuzzy spectral clustering by PCCA+:
-        application to Markov state models and data classification.
-        Adv Data Anal Classif 7, 147-179 (2013).
-        https://doi.org/10.1007/s11634-013-0134-6
+    .. [1] S. Roeblitz and M. Weber, Fuzzy spectral clustering by PCCA+:
+           application to Markov state models and data classification.
+           Adv Data Anal Classif 7, 147-179 (2013).
+           https://doi.org/10.1007/s11634-013-0134-6
     
     """
     # Dimensions.
@@ -344,7 +345,7 @@ def _indexsearch(X):
     Parameters
     ----------
     X : ndarray (n,m)
-        A matrix with m sorted Schur vectors in the columns. The constant Schur vector should be first.
+        A matrix with ``m`` sorted Schur vectors in the columns. The constant Schur vector should be first.
 
     Returns
     -------
@@ -411,31 +412,31 @@ def _opt_soft(X, rot_matrix):
 
     Parameters
     ----------
-    X : ndarray(n,m)
-        A matrix with m sorted Schur vectors in the columns. The constant Schur vector should be first.
+    X : ndarray (n,m)
+        A matrix with ``m`` sorted Schur vectors in the columns. The constant Schur vector should be first.
 
-    rot_mat : ndarray(m,m)
+    rot_mat : ndarray (m,m)
         Initial (non-optimized) rotation matrix.
 
     Returns
     -------
-    chi : ndarray(n,m)
+    chi : ndarray (n,m)
         Matrix containing the probability or membership of each state to be assigned to each cluster.
         The rows sum to 1.
     
-    rot_mat : ndarray(m,m)
+    rot_mat : ndarray (m,m)
         Optimized rotation matrix that rotates the dominant eigenvectors to yield the G-PCCA memberships, 
-        i.e., `chi` = `X`*`rot_mat`.
+        i.e., ``chi = X * rot_mat``.
         
     fopt : float (double)
-        The optimal value of the objective function :math:`f_{opt} = m - \mathtt{trace}(S)` (Eq. 16 from [1]).
+        The optimal value of the objective function :math:`f_{opt} = m - \mathtt{trace}(S)` (Eq. 16 from [1]_).
         
     References
     ----------
-    [1] S. Roeblitz and M. Weber, Fuzzy spectral clustering by PCCA+:
-        application to Markov state models and data classification.
-        Adv Data Anal Classif 7, 147-179 (2013).
-        https://doi.org/10.1007/s11634-013-0134-6
+    .. [1] S. Roeblitz and M. Weber, Fuzzy spectral clustering by PCCA+:
+           application to Markov state models and data classification.
+           Adv Data Anal Classif 7, 147-179 (2013).
+           https://doi.org/10.1007/s11634-013-0134-6
         
     """
     from scipy.optimize import fmin
@@ -476,15 +477,15 @@ def _fill_matrix(rot_matrix, X):
 
     Parameters
     ----------
-    rot_matrix : ndarray(m,m)
+    rot_matrix : ndarray (m,m)
         (infeasible) rotation matrix.
         
-    X : ndarray(n,m)
-        Matrix with m sorted Schur vectors in the columns. The constant Schur vector should be first.
+    X : ndarray (n,m)
+        Matrix with ``m`` sorted Schur vectors in the columns. The constant Schur vector should be first.
     
     Returns
     -------
-    rot_matrix : ndarray(m,m)       
+    rot_matrix : ndarray (m,m)       
         Feasible rotation matrix
     
     """
@@ -517,7 +518,7 @@ def _fill_matrix(rot_matrix, X):
 
 def gpcca(P, eta, m):
     """
-    G-PCCA [1] spectral clustering method with optimized memberships.
+    G-PCCA [1]_ spectral clustering method with optimized memberships.
 
     Clusters the dominant m Schur vectors of a transition matrix.
     This algorithm generates a fuzzy clustering such that the resulting membership functions 
@@ -525,47 +526,47 @@ def gpcca(P, eta, m):
 
     Parameters
     ----------
-    P : ndarray(n,n)
+    P : ndarray (n,n)
         Transition matrix (row-stochastic).
         
     eta : ndarray (n,) 
         Input (initial) distribution of states.
-        In case of a reversible transition matrix, use the stationary distribution `pi` here.
+        In case of a reversible transition matrix, use the stationary distribution ``pi`` here.
 
     m : int
         Number of clusters to group into.
 
     Returns
     -------
-    chi : ndarray(n,m)
+    chi : ndarray (n,m)
         A matrix containing the membership (or probability) of each state (to be assigned) 
         to each cluster. The rows sum up to 1.
         
     crispness : float (double)
         The crispness :math:`\xi \in [0,1]` quantifies the optimality of the solution (higher is better). 
         It characterizes how crisp (sharp) the decomposition of the state space into m clusters is.
-        It is given via (Eq. 17 from [2]):
+        It is given via (Eq. 17 from [2]_):
         
         ..math: \xi = (m - f_{opt}) / m = \mathtt{trace}(S) / m = \mathtt{trace}(\tilde{D} \chi^T D \chi) / m -> \mathtt{max}
         
-        with `D` being a diagonal matrix with `eta` on its diagonal.
+        with :math:`D` being a diagonal matrix with `eta` on its diagonal.
         
     References
     ----------
-    [1] Reuter, B., Weber, M., Fackeldey, K., Röblitz, S., & Garcia, M. E. (2018). Generalized
-        Markov State Modeling Method for Nonequilibrium Biomolecular Dynamics: Exemplified on
-        Amyloid β Conformational Dynamics Driven by an Oscillating Electric Field. Journal of
-        Chemical Theory and Computation, 14(7), 3579–3594. https://doi.org/10.1021/acs.jctc.8b00079
+    .. [1] Reuter, B., Weber, M., Fackeldey, K., Röblitz, S., & Garcia, M. E. (2018). Generalized
+           Markov State Modeling Method for Nonequilibrium Biomolecular Dynamics: Exemplified on
+           Amyloid β Conformational Dynamics Driven by an Oscillating Electric Field. Journal of
+           Chemical Theory and Computation, 14(7), 3579–3594. https://doi.org/10.1021/acs.jctc.8b00079
 
-    [2] S. Roeblitz and M. Weber, Fuzzy spectral clustering by PCCA+:
-        application to Markov state models and data classification.
-        Adv Data Anal Classif 7, 147-179 (2013).
-        https://doi.org/10.1007/s11634-013-0134-6
+    .. [2] S. Roeblitz and M. Weber, Fuzzy spectral clustering by PCCA+:
+           application to Markov state models and data classification.
+           Adv Data Anal Classif 7, 147-179 (2013).
+           https://doi.org/10.1007/s11634-013-0134-6
 
     Copyright (c) 2020 Bernhard Reuter, Susanna Roeblitz and Marcus Weber, 
     Zuse Institute Berlin, Takustrasse 7, 14195 Berlin
     ----------------------------------------------
-    If you use this code or parts of it, cite [1].
+    If you use this code or parts of it, cite [1]_.
     ----------------------------------------------
     
     """
@@ -627,12 +628,12 @@ def gpcca(P, eta, m):
 def coarsegrain(P, eta, m):
     """
     Coarse-grains the transition matrix `P` to `m` sets using G-PCCA.
-    Coarse-grains `P` such that the (dominant) Perron eigenvalues are preserved, using [1]:
+    Coarse-grains `P` such that the (dominant) Perron eigenvalues are preserved, using [1]_:
 
     ..math:
         P_c = (\chi^T D \chi)^{-1} (\chi^T D P \chi)
         
-    with `D` being a diagonal matrix with `eta` on its diagonal.
+    with :math:`D` being a diagonal matrix with `eta` on its diagonal.
         
     Parameters
     ----------
@@ -641,7 +642,7 @@ def coarsegrain(P, eta, m):
         
     eta : ndarray (n,) 
         Input (initial) distribution of states.
-        In case of a reversible transition matrix, use the stationary distribution `pi` here.
+        In case of a reversible transition matrix, use the stationary distribution ``pi`` here.
 
     m : int
         Number of clusters to group into.
@@ -653,20 +654,20 @@ def coarsegrain(P, eta, m):
 
     References
     ----------
-    [1] Reuter, B., Weber, M., Fackeldey, K., Röblitz, S., & Garcia, M. E. (2018). Generalized
-        Markov State Modeling Method for Nonequilibrium Biomolecular Dynamics: Exemplified on
-        Amyloid β Conformational Dynamics Driven by an Oscillating Electric Field. Journal of
-        Chemical Theory and Computation, 14(7), 3579–3594. https://doi.org/10.1021/acs.jctc.8b00079
+    .. [1] Reuter, B., Weber, M., Fackeldey, K., Röblitz, S., & Garcia, M. E. (2018). Generalized
+           Markov State Modeling Method for Nonequilibrium Biomolecular Dynamics: Exemplified on
+           Amyloid β Conformational Dynamics Driven by an Oscillating Electric Field. Journal of
+           Chemical Theory and Computation, 14(7), 3579–3594. https://doi.org/10.1021/acs.jctc.8b00079
 
-    [2] S. Roeblitz and M. Weber, Fuzzy spectral clustering by PCCA+:
-        application to Markov state models and data classification.
-        Adv Data Anal Classif 7, 147-179 (2013).
-        https://doi.org/10.1007/s11634-013-0134-6
+    .. [2] S. Roeblitz and M. Weber, Fuzzy spectral clustering by PCCA+:
+           application to Markov state models and data classification.
+           Adv Data Anal Classif 7, 147-179 (2013).
+           https://doi.org/10.1007/s11634-013-0134-6
         
     Copyright (c) 2020 Bernhard Reuter, Susanna Roeblitz and Marcus Weber, 
     Zuse Institute Berlin, Takustrasse 7, 14195 Berlin
     ----------------------------------------------
-    If you use this code or parts of it, cite [1].
+    If you use this code or parts of it, cite [1]_.
     ----------------------------------------------
     
     """                  
@@ -681,41 +682,41 @@ def coarsegrain(P, eta, m):
 
 class GPCCA(object):
     """
-    G-PCCA [1] spectral clustering method with optimized memberships.
+    G-PCCA [1]_ spectral clustering method with optimized memberships.
 
-    Clusters the dominant m Schur vectors of a transition matrix.
+    Clusters the dominant `m` Schur vectors of a transition matrix.
     This algorithm generates a fuzzy clustering such that the resulting membership functions 
     are as crisp (characteristic) as possible.
 
     Parameters
     ----------
-    P : ndarray(n,n)
+    P : ndarray (n,n)
         Transition matrix (row-stochastic).
         
     eta : ndarray (n,) 
         Input (initial) distribution of states.
-        In case of a reversible transition matrix, use the stationary distribution `pi` here.
+        In case of a reversible transition matrix, use the stationary distribution ``pi`` here.
 
     m : int
         Number of clusters to group into.
 
     Returns
     -------
-    chi : ndarray(n,m)
+    chi : ndarray (n,m)
         A matrix containing the membership (or probability) of each state (to be assigned) 
         to each cluster. The rows sum up to 1.
         
     References:
     -----------
-    [1] Reuter, B., Weber, M., Fackeldey, K., Röblitz, S., & Garcia, M. E. (2018). Generalized
-        Markov State Modeling Method for Nonequilibrium Biomolecular Dynamics: Exemplified on
-        Amyloid β Conformational Dynamics Driven by an Oscillating Electric Field. Journal of
-        Chemical Theory and Computation, 14(7), 3579–3594. https://doi.org/10.1021/acs.jctc.8b00079
+    .. [1] Reuter, B., Weber, M., Fackeldey, K., Röblitz, S., & Garcia, M. E. (2018). Generalized
+           Markov State Modeling Method for Nonequilibrium Biomolecular Dynamics: Exemplified on
+           Amyloid β Conformational Dynamics Driven by an Oscillating Electric Field. Journal of
+           Chemical Theory and Computation, 14(7), 3579–3594. https://doi.org/10.1021/acs.jctc.8b00079
 
     Copyright (c) 2020 Bernhard Reuter, Susanna Roeblitz and Marcus Weber, 
     Zuse Institute Berlin, Takustrasse 7, 14195 Berlin
     ----------------------------------------------
-    If you use this code or parts of it, cite [1].
+    If you use this code or parts of it, cite [1]_.
     ----------------------------------------------
 
     """
