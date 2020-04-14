@@ -530,6 +530,7 @@ def gpcca(P, eta, m):
         
     eta : ndarray (n,) 
         Input (initial) distribution of states.
+        In case of a reversible transition matrix, use the stationary distribution `pi` here.
 
     m : int
         Number of clusters to group into.
@@ -623,13 +624,32 @@ def gpcca(P, eta, m):
     return (chi, crispness)
 
 
-def coarsegrain(P, eta, n_clusters):
+def coarsegrain(P, eta, m):
     """
-    Coarse-grains the transition matrix `P` to `n` sets using G-PCCA.
+    Coarse-grains the transition matrix `P` to `m` sets using G-PCCA.
     Coarse-grains `P` such that the (dominant) Perron eigenvalues are preserved, using [1]:
 
     ..math:
         P_c = (\chi^T D \chi)^{-1} (\chi^T D P \chi)
+        
+    with `D` being a diagonal matrix with `eta` on its diagonal.
+        
+    Parameters
+    ----------
+    P : ndarray (n,n)
+        Transition matrix (row-stochastic).
+        
+    eta : ndarray (n,) 
+        Input (initial) distribution of states.
+        In case of a reversible transition matrix, use the stationary distribution `pi` here.
+
+    m : int
+        Number of clusters to group into.
+
+    Returns
+    -------
+    P_coarse : ndarray (m,m)
+        The coarse-grained transition matrix (row-stochastic).
 
     References
     ----------
@@ -651,7 +671,7 @@ def coarsegrain(P, eta, n_clusters):
     
     """                  
     #Matlab: Pc = pinv(chi'*diag(eta)*chi)*(chi'*diag(eta)*P*chi)
-    chi = gpcca(P, eta, n_clusters)
+    chi = gpcca(P, eta, m)
     W = np.linalg.pinv(np.dot(chi.T, np.diag(eta)).dot(chi))
     A = np.dot(chi.T, np.diag(eta)).dot(P).dot(chi)
     P_coarse = W.dot(A)
@@ -674,6 +694,7 @@ class GPCCA(object):
         
     eta : ndarray (n,) 
         Input (initial) distribution of states.
+        In case of a reversible transition matrix, use the stationary distribution `pi` here.
 
     m : int
         Number of clusters to group into.
