@@ -1468,14 +1468,14 @@ def _pcca_object(T, m, eta=None, use_gpcca=False):
     References:
     -----------
     .. [1] S. Roeblitz and M. Weber, Fuzzy spectral clustering by PCCA+:
-        application to Markov state models and data classification.
-        Adv Data Anal Classif 7(2), 147-179 (2013).
-        https://doi.org/10.1007/s11634-013-0134-6
+           application to Markov state models and data classification.
+           Adv Data Anal Classif 7(2), 147-179 (2013).
+           https://doi.org/10.1007/s11634-013-0134-6
         
     .. [2] Reuter, B., Weber, M., Fackeldey, K., Röblitz, S., & Garcia, M. E. (2018). Generalized
-        Markov State Modeling Method for Nonequilibrium Biomolecular Dynamics: Exemplified on
-        Amyloid β Conformational Dynamics Driven by an Oscillating Electric Field. Journal of
-        Chemical Theory and Computation, 14(7), 3579–3594. https://doi.org/10.1021/acs.jctc.8b00079
+           Markov State Modeling Method for Nonequilibrium Biomolecular Dynamics: Exemplified on
+           Amyloid β Conformational Dynamics Driven by an Oscillating Electric Field. Journal of
+           Chemical Theory and Computation, 14(7), 3579–3594. https://doi.org/10.1021/acs.jctc.8b00079
         
     """
     if _issparse(T):
@@ -1523,9 +1523,9 @@ def pcca_memberships(T, m, eta=None, use_gpcca=False):
     References
     ----------
     .. [1] S. Roeblitz and M. Weber, Fuzzy spectral clustering by PCCA+:
-        application to Markov state models and data classification.
-        Adv Data Anal Classif 7(2), 147-179 (2013).
-        https://doi.org/10.1007/s11634-013-0134-6
+           application to Markov state models and data classification.
+           Adv Data Anal Classif 7(2), 147-179 (2013).
+           https://doi.org/10.1007/s11634-013-0134-6
 
     """
     if not use_gpcca:
@@ -1563,9 +1563,9 @@ def pcca_sets(T, m, eta=None, use_gpcca=False):
     References
     ----------
     .. [1] S. Roeblitz and M. Weber, Fuzzy spectral clustering by PCCA+:
-        application to Markov state models and data classification.
-        Adv Data Anal Classif 7(2), 147-179 (2013).
-        https://doi.org/10.1007/s11634-013-0134-6
+           application to Markov state models and data classification.
+           Adv Data Anal Classif 7(2), 147-179 (2013).
+           https://doi.org/10.1007/s11634-013-0134-6
     """
     if not use_gpcca:
         return _pcca_object(T, m).metastable_sets
@@ -1602,9 +1602,9 @@ def pcca_assignments(T, m, eta=None, use_gpcca=False):
     References
     ----------
     .. [1] S. Roeblitz and M. Weber, Fuzzy spectral clustering by PCCA+:
-        application to Markov state models and data classification.
-        Adv Data Anal Classif 7(2), 147-179 (2013).
-        https://doi.org/10.1007/s11634-013-0134-6
+           application to Markov state models and data classification.
+           Adv Data Anal Classif 7(2), 147-179 (2013).
+           https://doi.org/10.1007/s11634-013-0134-6
     """
     if not use_gpcca:
         return _pcca_object(T, m).metastable_assignment
@@ -1633,12 +1633,12 @@ def pcca_distributions(T, m):
     References
     ----------
     .. [1] S. Roeblitz and M. Weber, Fuzzy spectral clustering by PCCA+:
-        application to Markov state models and data classification.
-        Adv Data Anal Classif 7(2), 147-179 (2013).
-        https://doi.org/10.1007/s11634-013-0134-6
+           application to Markov state models and data classification.
+           Adv Data Anal Classif 7(2), 147-179 (2013).
+           https://doi.org/10.1007/s11634-013-0134-6
     .. [2] F. Noe, H. Wu, J.-H. Prinz and N. Plattner:
-        Projected and hidden Markov models for calculating kinetics and metastable states of complex molecules
-        J. Chem. Phys. 139, 184114 (2013)
+           Projected and hidden Markov models for calculating kinetics and metastable states of complex molecules
+           J. Chem. Phys. 139, 184114 (2013)
     """
     return _pcca_object(T, m).output_probabilities
 
@@ -1701,19 +1701,19 @@ def coarsegrain(P, m, eta=None, use_gpcca=False):
     References
     ----------
     .. [1] S. Roeblitz and M. Weber, Fuzzy spectral clustering by PCCA+:
-        application to Markov state models and data classification.
-        Adv Data Anal Classif 7(2), 147-179 (2013).
-        https://doi.org/10.1007/s11634-013-0134-6
+           application to Markov state models and data classification.
+           Adv Data Anal Classif 7(2), 147-179 (2013).
+           https://doi.org/10.1007/s11634-013-0134-6
     .. [2] Reuter, B., Weber, M., Fackeldey, K., Röblitz, S., & Garcia, M. E. (2018). Generalized
-        Markov State Modeling Method for Nonequilibrium Biomolecular Dynamics: Exemplified on
-        Amyloid β Conformational Dynamics Driven by an Oscillating Electric Field. Journal of
-        Chemical Theory and Computation, 14(7), 3579–3594. https://doi.org/10.1021/acs.jctc.8b00079
+           Markov State Modeling Method for Nonequilibrium Biomolecular Dynamics: Exemplified on
+           Amyloid β Conformational Dynamics Driven by an Oscillating Electric Field. Journal of
+           Chemical Theory and Computation, 14(7), 3579–3594. https://doi.org/10.1021/acs.jctc.8b00079
     .. [3] Kube, S and M Weber.
-        A coarse-graining method for the identification of transition rates between molecular conformations
-        J. Chem. Phys. 126, 024103 (2007)
+           A coarse-graining method for the identification of transition rates between molecular conformations
+           J. Chem. Phys. 126, 024103 (2007)
     .. [4] F. Noe, H. Wu, J.-H. Prinz and N. Plattner:
-        Projected and hidden Markov models for calculating kinetics and metastable states of complex molecules
-        J. Chem. Phys. 139, 184114 (2013)
+           Projected and hidden Markov models for calculating kinetics and metastable states of complex molecules
+           J. Chem. Phys. 139, 184114 (2013)
     """
     if not use_gpcca:
         P_c = _pcca_object(P, m).coarse_grained_transition_matrix
