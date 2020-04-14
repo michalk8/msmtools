@@ -1442,7 +1442,7 @@ def relaxation(T, p0, obs, times=(1), k=None, ncv=None):
 # ========================
 
 def _pcca_object(T, m, eta=None, use_gpcca=False):
-    """
+    r"""
     Constructs the pcca object from a dense or sparse transition matrix.
 
     Parameters
@@ -1489,7 +1489,7 @@ def _pcca_object(T, m, eta=None, use_gpcca=False):
 
 
 def pcca_memberships(T, m, eta=None, use_gpcca=False):
-    """Compute metastable sets using PCCA+ [1]_ or dominant (incl. metastable) sets using G-PCCA [2]_ 
+    r"""Compute metastable sets using PCCA+ [1]_ or dominant (incl. metastable) sets using G-PCCA [2]_ 
     and return the membership of all states to these sets.
 
     Parameters
@@ -1535,7 +1535,7 @@ def pcca_memberships(T, m, eta=None, use_gpcca=False):
 
 
 def pcca_sets(T, m, eta=None, use_gpcca=False):
-    """ Computes the metastable sets given transition matrix T using PCCA+ [1]_ 
+    r""" Computes the metastable sets given transition matrix T using PCCA+ [1]_ 
     or the dominant (incl. metastable) sets given transition matrix T using G-PCCA [2]_.
 
     This is only recommended for visualization purposes. You *cannot* compute any
@@ -1574,7 +1574,7 @@ def pcca_sets(T, m, eta=None, use_gpcca=False):
 
 
 def pcca_assignments(T, m, eta=None, use_gpcca=False):
-    """ Computes the assignment to metastable sets for active set states using PCCA+ [1]_ 
+    r""" Computes the assignment to metastable sets for active set states using PCCA+ [1]_ 
     or the assignment of each microstate to dominant (incl. metastable) sets using G-PCCA [2]_.
 
     This is only recommended for visualization purposes. You *cannot* compute any
@@ -1613,7 +1613,7 @@ def pcca_assignments(T, m, eta=None, use_gpcca=False):
 
      
 def pcca_distributions(T, m):
-    """ Computes the probability distributions of active set states within each metastable set 
+    r""" Computes the probability distributions of active set states within each metastable set 
     using the PCCA+ method [1]_ using Bayesian inversion as described in [2]_.
 
     Parameters
@@ -1644,7 +1644,7 @@ def pcca_distributions(T, m):
 
 
 def coarsegrain(P, m, eta=None, use_gpcca=False):
-    """Coarse-grains transition matrix `P` to `m` sets using PCCA+ [1]_ or G-PCCA [2]_.
+    r"""Coarse-grains transition matrix `P` to `m` sets using PCCA+ [1]_ or G-PCCA [2]_.
 
     PCCA+:
     Coarse-grains a reversible transition matrix `P` such that the dominant eigenvalues are preserved, using:
