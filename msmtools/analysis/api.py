@@ -1441,9 +1441,9 @@ def relaxation(T, p0, obs, times=(1), k=None, ncv=None):
 # PCCA
 # ========================
 
-def _pcca_object(T, m):
+def _pcca_object(T, m, eta=None, use_gpcca=False):
     """
-    Constructs the pcca object from dense or sparse
+    Constructs the pcca object from a dense or sparse transition matrix.
 
     Parameters
     ----------
@@ -1451,21 +1451,46 @@ def _pcca_object(T, m):
         Transition matrix
     m : int
         Number of metastable sets
+    eta : ndarray (n,), (default=None)
+        Only needed, if `use_gpcca=True`.
+        Input (initial) distribution of states.
+        In case of a reversible transition matrix, provide the stationary distribution `pi` here.
+    use_gpcca : boolean, (default=False)
+        If `False` standard PCCA+ algorithm [1]_ for reversible transition matrices is used.
+        If `True` the Generalized PCCA+ (G-PCCA) algorithm [2]_ for arbitrary 
+        (reversible and non-reversible) transition matrices is used.
 
     Returns
     -------
     pcca : PCCA
         PCCA object
+        
+    References:
+    -----------
+    .. [1] S. Roeblitz and M. Weber, Fuzzy spectral clustering by PCCA+:
+        application to Markov state models and data classification.
+        Adv Data Anal Classif 7(2), 147-179 (2013).
+        https://doi.org/10.1007/s11634-013-0134-6
+        
+    .. [2] Reuter, B., Weber, M., Fackeldey, K., Röblitz, S., & Garcia, M. E. (2018). Generalized
+        Markov State Modeling Method for Nonequilibrium Biomolecular Dynamics: Exemplified on
+        Amyloid β Conformational Dynamics Driven by an Oscillating Electric Field. Journal of
+        Chemical Theory and Computation, 14(7), 3579–3594. https://doi.org/10.1021/acs.jctc.8b00079
+        
     """
     if _issparse(T):
         _showSparseConversionWarning()
         T = T.toarray()
     T = _types.ensure_ndarray(T, ndim=2, uniform=True, kind='numeric')
-    return dense.pcca.PCCA(T, m)
+    if not use_gpcca:
+        return dense.pcca.PCCA(T, m)
+    else:
+        return dense.gpcca.GPCCA(T, eta, m)
 
 
-def pcca_memberships(T, m):
-    r"""Compute meta-stable sets using PCCA++ _[1] and return the membership of all states to these sets.
+def pcca_memberships(T, m, eta=None, use_gpcca=False):
+    """Compute metastable sets using PCCA+ [1]_ or dominant (incl. metastable) sets using G-PCCA [2]_ 
+    and return the membership of all states to these sets.
 
     Parameters
     ----------
@@ -1473,33 +1498,45 @@ def pcca_memberships(T, m):
         Transition matrix
     m : int
         Number of metastable sets
+    eta : ndarray (n,), (default=None)
+        Only needed, if `use_gpcca=True`.
+        Input (initial) distribution of states.
+        In case of a reversible transition matrix, provide the stationary distribution `pi` here.
+    use_gpcca : boolean, (default=False)
+        If `False` standard PCCA+ algorithm [1]_ for reversible transition matrices is used.
+        If `True` the Generalized PCCA+ (G-PCCA) algorithm [2]_ for arbitrary 
+        (reversible and non-reversible) transition matrices is used.
 
     Returns
     -------
     clusters : (n, m) ndarray
-        Membership vectors. clusters[i, j] contains the membership of state i to metastable state j
+        Membership vectors. clusters[i, j] contains the membership of state i 
+        to metastable (dominant) state j
 
     Notes
     -----
-    Perron cluster center analysis assigns each microstate a vector of
-    membership probabilities. This assignement is performed using the
-    right eigenvectors of the transition matrix. Membership
-    probabilities are computed via numerical optimization of the
-    entries of a membership matrix.
+    Perron cluster center analysis assigns each microstate a vector of membership probabilities. 
+    This assignment is performed using the right eigenvectors (or Schur vectors in case of G-PCCA) 
+    of the transition matrix. Membership probabilities are computed via numerical optimization 
+    of the entries of a membership matrix.
 
     References
     ----------
-    .. [1] Roeblitz, S and M Weber. 2013. Fuzzy spectral clustering by
-        PCCA+: application to Markov state models and data
-        classification. Advances in Data Analysis and Classification 7
-        (2): 147-179
+    .. [1] S. Roeblitz and M. Weber, Fuzzy spectral clustering by PCCA+:
+        application to Markov state models and data classification.
+        Adv Data Anal Classif 7(2), 147-179 (2013).
+        https://doi.org/10.1007/s11634-013-0134-6
 
     """
-    return _pcca_object(T, m).memberships
+    if not use_gpcca:
+        return _pcca_object(T, m).memberships
+    else:
+        return _pcca_object(P, m, eta, True).memberships
 
 
-def pcca_sets(T, m):
-    r""" Computes the metastable sets given transition matrix T using the PCCA++ method _[1]
+def pcca_sets(T, m, eta=None, use_gpcca=False):
+    """ Computes the metastable sets given transition matrix T using PCCA+ [1]_ 
+    or the dominant (incl. metastable) sets given transition matrix T using G-PCCA [2]_.
 
     This is only recommended for visualization purposes. You *cannot* compute any
     actual quantity of the coarse-grained kinetics without employing the fuzzy memberships!
@@ -1510,52 +1547,79 @@ def pcca_sets(T, m):
         Transition matrix
     m : int
         Number of metastable sets
+    eta : ndarray (n,), (default=None)
+        Only needed, if `use_gpcca=True`.
+        Input (initial) distribution of states.
+        In case of a reversible transition matrix, provide the stationary distribution `pi` here.
+    use_gpcca : boolean, (default=False)
+        If `False` standard PCCA+ algorithm [1]_ for reversible transition matrices is used.
+        If `True` the Generalized PCCA+ (G-PCCA) algorithm [2]_ for arbitrary 
+        (reversible and non-reversible) transition matrices is used.
 
     Returns
     -------
-    A list of length equal to metastable states. Each element is an array with microstate indexes contained in it
+    A list of length equal to metastable states. Each element is an array with microstate indexes contained in it.
 
     References
     ----------
-    .. [1] Roeblitz, S and M Weber. 2013. Fuzzy spectral clustering by
-        PCCA+: application to Markov state models and data
-        classification. Advances in Data Analysis and Classification 7
-        (2): 147-179
+    .. [1] S. Roeblitz and M. Weber, Fuzzy spectral clustering by PCCA+:
+        application to Markov state models and data classification.
+        Adv Data Anal Classif 7(2), 147-179 (2013).
+        https://doi.org/10.1007/s11634-013-0134-6
     """
-    return _pcca_object(T, m).metastable_sets
+    if not use_gpcca:
+        return _pcca_object(T, m).metastable_sets
+    else:
+        return _pcca_object(P, m, eta, True).metastable_sets
 
 
-def pcca_assignments(T, m):
-    """ Computes the assignment to metastable sets for active set states using the PCCA++ method _[1]
+def pcca_assignments(T, m, eta=None, use_gpcca=False):
+    """ Computes the assignment to metastable sets for active set states using PCCA+ [1]_ 
+    or the assignment of each microstate to dominant (incl. metastable) sets using G-PCCA [2]_.
 
     This is only recommended for visualization purposes. You *cannot* compute any
     actual quantity of the coarse-grained kinetics without employing the fuzzy memberships!
 
     Parameters
     ----------
+    T : (n, n) ndarray or scipy.sparse matrix
+        Transition matrix
     m : int
         Number of metastable sets
+    eta : ndarray (n,), (default=None)
+        Only needed, if `use_gpcca=True`.
+        Input (initial) distribution of states.
+        In case of a reversible transition matrix, provide the stationary distribution `pi` here.
+    use_gpcca : boolean, (default=False)
+        If `False` standard PCCA+ algorithm [1]_ for reversible transition matrices is used.
+        If `True` the Generalized PCCA+ (G-PCCA) algorithm [2]_ for arbitrary 
+        (reversible and non-reversible) transition matrices is used.
 
     Returns
     -------
-    For each active set state, the metastable state it is located in.
+    For each active set state (microstate), the metastable (dominant) state it is located in.
 
     References
     ----------
-    .. [1] Roeblitz, S and M Weber. 2013. Fuzzy spectral clustering by
-        PCCA+: application to Markov state models and data
-        classification. Advances in Data Analysis and Classification 7
-        (2): 147-179
+    .. [1] S. Roeblitz and M. Weber, Fuzzy spectral clustering by PCCA+:
+        application to Markov state models and data classification.
+        Adv Data Anal Classif 7(2), 147-179 (2013).
+        https://doi.org/10.1007/s11634-013-0134-6
     """
-    return _pcca_object(T, m).metastable_assignment
+    if not use_gpcca:
+        return _pcca_object(T, m).metastable_assignment
+    else:
+        return _pcca_object(P, m, eta, True).metastable_assignment
 
-
+     
 def pcca_distributions(T, m):
-    """ Computes the probability distributions of active set states within each metastable set using the PCCA++ method _[1]
-    using Bayesian inversion as described in _[2].
+    """ Computes the probability distributions of active set states within each metastable set 
+    using the PCCA+ method [1]_ using Bayesian inversion as described in [2]_.
 
     Parameters
     ----------
+    T : (n, n) ndarray or scipy.sparse matrix
+        Transition matrix
     m : int
         Number of metastable sets
 
@@ -1568,10 +1632,10 @@ def pcca_distributions(T, m):
 
     References
     ----------
-    .. [1] Roeblitz, S and M Weber. 2013. Fuzzy spectral clustering by
-        PCCA+: application to Markov state models and data
-        classification. Advances in Data Analysis and Classification 7
-        (2): 147-179
+    .. [1] S. Roeblitz and M. Weber, Fuzzy spectral clustering by PCCA+:
+        application to Markov state models and data classification.
+        Adv Data Anal Classif 7(2), 147-179 (2013).
+        https://doi.org/10.1007/s11634-013-0134-6
     .. [2] F. Noe, H. Wu, J.-H. Prinz and N. Plattner:
         Projected and hidden Markov models for calculating kinetics and metastable states of complex molecules
         J. Chem. Phys. 139, 184114 (2013)
@@ -1579,46 +1643,89 @@ def pcca_distributions(T, m):
     return _pcca_object(T, m).output_probabilities
 
 
-def coarsegrain(P, m):
-    """Coarse-grains transition matrix P to n sets using PCCA++ _[1]
+def coarsegrain(P, m, eta=None, use_gpcca=False):
+    """Coarse-grains transition matrix `P` to `m` sets using PCCA+ [1]_ or G-PCCA [2]_.
 
-    Coarse-grains transition matrix P such that the dominant eigenvalues are preserved, using:
+    PCCA+:
+    Coarse-grains a reversible transition matrix `P` such that the dominant eigenvalues are preserved, using:
 
     ..math:
-        \tilde{P} = M^T P M (M^T M)^{-1}
+        P_c = M^T P M (M^T M)^{-1}
 
     where :math:`M` is the membership probability matrix and P is the full transition matrix.
-    See _[2] and _[3] for the theory. The results of the coarse-graining can be interpreted as a hidden markov model
+    See [3]_ and [4]_ for the theory. The results of the coarse-graining can be interpreted as a hidden markov model
     where the states of the coarse-grained transition matrix are the hidden states. Therefore we additionally return
     the stationary probability of the coarse-grained transition matrix as well as the output probability matrix from
     metastable states to states in order to provide all objects needed for an HMM.
+    
+    G-PCCA:
+    Coarse-grains a reversible or non-reversible transition matrix `P` 
+    such that the (dominant) Perron eigenvalues are preserved, using [2]_:
+    
+    ..math:
+        P_c = (\chi^T D \chi)^{-1} (\chi^T D P \chi)
+        
+    with :math:`D` being a diagonal matrix with `eta` on its diagonal.
+    
+    Parameters
+    ----------
+    P : (n, n) ndarray or scipy.sparse matrix
+        Transition matrix
+    m : int
+        Number of metastable sets
+    eta : ndarray (n,), (default=None)
+        Only needed, if `use_gpcca=True`.
+        Input (initial) distribution of states.
+        In case of a reversible transition matrix, provide the stationary distribution ``pi`` here.
+    use_gpcca : boolean, (default=False)
+        If False standard PCCA+ algorithm [1]_ for reversible transition matrices is used.
+        If True the Generalized PCCA+ (G-PCCA) algorithm [2]_ for arbitrary 
+        (reversible and non-reversible) transition matrices is used.
 
     Returns
     -------
-    pi_c : ndarray( (m) )
-        Equilibrium probability vector of the coarse-grained transition matrix
     P_c : ndarray( (m, m) )
         Coarse-grained transition matrix
+    pi_c : ndarray( (m) )
+        Equilibrium probability vector of the coarse-grained transition matrix.
+        Only returned, if ``use_gpcca=False``.
+    eta_c : ndarray( (m) )
+        Coarse-grained input (initial) distribution of states.
+        Only returned, if ``use_gpcca=True``.
     p_out : ndarray( (m, n) )
         A matrix containing the probability distribution of each active set state, given that we are in a
         metastable set.
         i.e. p(state | metastable). The row sums of p_out are 1.
+        Only returned, if ``use_gpcca=False``.
 
     References
     ----------
-    .. [1] Roeblitz, S and M Weber. 2013. Fuzzy spectral clustering by
-        PCCA+: application to Markov state models and data
-        classification. Advances in Data Analysis and Classification 7
-        (2): 147-179
-    .. [2] Kube, S and M Weber.
+    .. [1] S. Roeblitz and M. Weber, Fuzzy spectral clustering by PCCA+:
+        application to Markov state models and data classification.
+        Adv Data Anal Classif 7(2), 147-179 (2013).
+        https://doi.org/10.1007/s11634-013-0134-6
+    .. [2] Reuter, B., Weber, M., Fackeldey, K., Röblitz, S., & Garcia, M. E. (2018). Generalized
+        Markov State Modeling Method for Nonequilibrium Biomolecular Dynamics: Exemplified on
+        Amyloid β Conformational Dynamics Driven by an Oscillating Electric Field. Journal of
+        Chemical Theory and Computation, 14(7), 3579–3594. https://doi.org/10.1021/acs.jctc.8b00079
+    .. [3] Kube, S and M Weber.
         A coarse-graining method for the identification of transition rates between molecular conformations
         J. Chem. Phys. 126, 024103 (2007)
-    .. [2] F. Noe, H. Wu, J.-H. Prinz and N. Plattner:
+    .. [4] F. Noe, H. Wu, J.-H. Prinz and N. Plattner:
         Projected and hidden Markov models for calculating kinetics and metastable states of complex molecules
         J. Chem. Phys. 139, 184114 (2013)
     """
-    return _pcca_object(P, m).coarse_grained_transition_matrix
-
+    if not use_gpcca:
+        P_c = _pcca_object(P, m).coarse_grained_transition_matrix
+        pi_c = _pcca_object(P, m).coarse_grained_stationary_probability
+        p_out = _pcca_object(T, m).output_probabilities
+        return (P_c, pi_c, p_out)
+        
+    else:
+        P_c = _pcca_object(P, m, eta, True).coarse_grained_transition_matrix
+        eta_c = _pcca_object(P, m, eta, True).coarse_grained_input_distribution
+        return (P_c, eta_c)
+       
 
 ################################################################################
 # Sensitivities
