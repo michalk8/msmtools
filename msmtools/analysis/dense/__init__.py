@@ -27,3 +27,4 @@ from . import hitting_probability
 from . import mean_first_passage_time
 from . import sensitivity
 from . import pcca
+from . import gpcca
