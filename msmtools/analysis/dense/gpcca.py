@@ -100,8 +100,7 @@ def _gram_schmidt_mod(Q, eta):
     for i in range(n):
         vsum = np.sum(Q[:,i])
         dummy = np.abs( Q[:,i] - ( np.ones(Q[:,i].shape) * (vsum / m) ))
-        dummy1 < ( 1000000 * eps )
-        if np.all(dummy1)  
+        if np.all(dummy < ( 1e6 * eps )):  
             max_i = i
         
     # Shift non-constant first (Schur) vector to the right.
