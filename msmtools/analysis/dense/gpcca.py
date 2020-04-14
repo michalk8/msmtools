@@ -178,7 +178,7 @@ def _do_schur(P, eta, m):
         raise ValueError("P matrix isn't quadratic!")
     if not (eta.shape[0]==N1):
         raise ValueError("eta vector length doesn't match with the shape of P!")
-    if not numpy.allclose(np.sum(P,1), np.ones(N1), rtol=eps, atol=eps)
+    if not numpy.allclose(np.sum(P,1), np.ones(N1), rtol=eps, atol=eps):
         raise ValueError("Not all rows of P sum up to one (within numerical precision)! "
                          "P must be a row-stochastic matrix!")
     if not np.all(eta > eps):
