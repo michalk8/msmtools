@@ -39,7 +39,7 @@ eps = np.finfo(np.float64).eps
 
 
 def _find_twoblocks(R):
-    """
+    r"""
     This function checks the sorted part of the Schurform `R` for 2x2-blocks. 
     If a 2x2-block (corresponding to two complex conjugate eigenvalues, that MUST NOT be splitted) 
     at positions (``rr_i;i``, ``rr_i;i+1``, ``rr_i+1;i``, ``rr_i+1;i+1``) is found, the row-index ``i`
@@ -67,7 +67,7 @@ def _find_twoblocks(R):
   
   
 def _gram_schmidt_mod(Q, eta):
-    """
+    r"""
     Function to :math:`\eta`-orthonormalize Schur vectors - modified numerically stable version.
     
     Parameters
@@ -405,7 +405,7 @@ def _indexsearch(X):
 
 
 def _opt_soft(X, rot_matrix):
-    """
+    r"""
     Optimizes the G-PCCA rotation matrix such that the memberships are exclusively non-negative
     and computes the membership matrix.
 
@@ -516,7 +516,7 @@ def _fill_matrix(rot_matrix, X):
 
 
 def gpcca(P, eta, m):
-    """
+    r"""
     G-PCCA [1]_ spectral clustering method with optimized memberships.
 
     Clusters the dominant m Schur vectors of a transition matrix.
@@ -625,7 +625,7 @@ def gpcca(P, eta, m):
 
 
 def coarsegrain(P, eta, m):
-    """
+    r"""
     Coarse-grains the transition matrix `P` to `m` sets using G-PCCA.
     Coarse-grains `P` such that the (dominant) Perron eigenvalues are preserved, using [1]_:
 
