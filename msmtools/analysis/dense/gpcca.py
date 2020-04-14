@@ -136,7 +136,7 @@ def _gram_schmidt_mod(Q, eta):
 
 
 def _do_schur(P, eta, m):
-    """
+    r"""
     This function performs a Schur decomposition of the (n,n) transition matrix `P`, with due regard 
     to the input (initial) distribution of states `eta` (which can be the stationary distribution ``pi``,
     if a reversible matrix `P` is considered, or some initial (even arbitrarily choosen, e.g., uniform) 
@@ -227,7 +227,7 @@ def _do_schur(P, eta, m):
   
   
 def _objective(alpha, X):
-    """
+    r"""
     Compute objective function value.
     
     Parameters
@@ -302,7 +302,7 @@ def _objective(alpha, X):
   
   
 def _initialize_rot_matrix(X):
-    """
+    r"""
     Initialize the rotation (m,m)-matrix. 
     
     Parameters
@@ -338,7 +338,7 @@ def _initialize_rot_matrix(X):
  
 
 def _indexsearch(X):
-    """
+    r"""
     Function to find a simplex structure in the data.
 
     Parameters
@@ -471,7 +471,7 @@ def _opt_soft(X, rot_matrix):
   
 
 def _fill_matrix(rot_matrix, X):
-    """
+    r"""
     Make the rotation matrix feasible.
 
     Parameters
@@ -680,7 +680,7 @@ def coarsegrain(P, eta, m):
 
 
 class GPCCA(object):
-    """
+    r"""
     G-PCCA [1]_ spectral clustering method with optimized memberships.
 
     Clusters the dominant `m` Schur vectors of a transition matrix.
@@ -783,7 +783,7 @@ class GPCCA(object):
 
     @property
     def metastable_assignment(self):
-        """
+        r"""
         Crisp clustering using G-PCCA. This is only recommended for visualization purposes. You *cannot* 
         compute any actual quantity of the coarse-grained kinetics without employing the fuzzy memberships!
 
@@ -796,7 +796,7 @@ class GPCCA(object):
 
     @property
     def metastable_sets(self):
-        """
+        r"""
         Crisp clustering using G-PCCA. This is only recommended for visualization purposes. You *cannot*
         compute any actual quantity of the coarse-grained kinetics without employing the fuzzy memberships!
 
