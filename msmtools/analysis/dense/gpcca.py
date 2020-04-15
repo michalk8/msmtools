@@ -110,7 +110,7 @@ def _gram_schmidt_mod(Q, eta):
     # become the unit vector 1!).
     Q[:,0] = np.sqrt(eta)
     # Raise, if the subspace changed!
-    if not ( subspace_angles(Q, Q_copy) < 1000000 * eps ):
+    if not ( subspace_angles(Q, Q_copy) < 1e8 * eps ):
         raise ValueError("The subspace of Q derived by shifting a non-constant first (Schur)vector "
                          "to the right and setting the first (Schur) vector equal sqrt(eta) doesn't "
                          "match the subspace of the original Q!")
@@ -168,6 +168,7 @@ def _do_schur(P, eta, m):
     """
     
     from scipy.linalg import schur
+    from msmtools.util.sort_real_schur import sort_real_schur
     
     # Exeptions
     N1 = P.shape[0]
@@ -178,24 +179,24 @@ def _do_schur(P, eta, m):
         raise ValueError("P matrix isn't quadratic!")
     if not (eta.shape[0]==N1):
         raise ValueError("eta vector length doesn't match with the shape of P!")
-    if not numpy.allclose(np.sum(P,1), np.ones(N1), rtol=eps, atol=eps):
+    if not np.allclose(np.sum(P,1), np.ones(N1), rtol=eps, atol=eps):
         raise ValueError("Not all rows of P sum up to one (within numerical precision)! "
                          "P must be a row-stochastic matrix!")
     if not np.all(eta > eps):
         raise ValueError("Not all elements of eta are > 0 (within numerical precision)!")
-        
-    # Warnings
-    if m - 1 not in _find_twoblocks(R):
-        warnings.warn("Coarse-graining with " + str(m) + " states cuts through a block of "
-                      + "complex conjugate eigenvalues in the Schur form. The result will "
-                      + "be of questionable meaning. "
-                      + "Please increase/decrease number of states by one.")
 
     # Weight the stochastic matrix P by the input (initial) distribution eta.
     P_bar = np.diag(np.sqrt(eta)).dot(P).dot(np.diag(1./np.sqrt(eta)))
 
     # Make a Schur decomposition of P_bar.
     R, Q = schur(P,output='real')
+
+    # Warnings
+    if m - 1 not in _find_twoblocks(R):
+        warnings.warn("Coarse-graining with " + str(m) + " states cuts through a block of "
+                      + "complex conjugate eigenvalues in the Schur form. The result will "
+                      + "be of questionable meaning. "
+                      + "Please increase/decrease number of states by one.")
 
     # Sort the Schur matrix and vectors.
     Q, R, ap = sort_real_schur(Q, R, z=np.inf, b=m)
@@ -217,7 +218,7 @@ def _do_schur(P, eta, m):
         raise ValueError("The number of rows n=%d of the Schur vector matrix X doesn't match those (n=%d) of P!" 
                          % (X.shape[0], P.shape[0]))
     # Raise, if the (Schur)vectors aren't orthogonal!
-    if not numpy.allclose(X.conj().T.dot(np.diag(eta)).dot(X), np.eye(X.shape[1]), rtol=10000*eps, atol=10000*eps):
+    if not np.allclose(X.conj().T.dot(np.diag(eta)).dot(X), np.eye(X.shape[1]), rtol=10000*eps, atol=10000*eps):
         raise ValueError("Schur vectors appear to not be orthogonal!")
     # Raise, if the first column X[:,0] of the Schur vector matrix isn't constantly equal 1!
     if not np.all(np.abs(X[:,0] - 1) < (1000 * eps)):
