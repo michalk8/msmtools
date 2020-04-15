@@ -119,5 +119,8 @@ if not(len(sys.argv) == 1 or (len(sys.argv) >= 2 and ('--help' in sys.argv[1:] o
     metadata['configuration'] = configuration
 
 if __name__ == '__main__':
-    from numpy.distutils.core import setup
+    try:
+        from setuptools import setup
+    except ImportError:
+        from distutils.core import setup
     setup(**metadata)
