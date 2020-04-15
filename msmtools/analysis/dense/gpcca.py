@@ -698,12 +698,6 @@ class GPCCA(object):
 
     m : int
         Number of clusters to group into.
-
-    Returns
-    -------
-    chi : ndarray (n,m)
-        A matrix containing the membership (or probability) of each state (to be assigned) 
-        to each cluster. The rows sum up to 1.
         
     References:
     -----------
