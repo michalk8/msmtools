@@ -265,7 +265,7 @@ def _objective(alpha, X):
     rot_matrix = np.zeros((k, k))
     
     # Sanity checks.
-    if not (alpha.shape == k**2):
+    if not (alpha.shape[0] == k**2):
         raise ValueError("The shape of alpha doesn't match with the shape of X: "
                          + "It is not a ((" + str(m) + "-1)^2,)-vector, but of dimension " 
                          + str(alpha.shape) + ". X is of shape " + str(X.shape) + ".")
