@@ -623,7 +623,7 @@ def gpcca(P, eta, m):
 
     # check if we have at least m dominant sets. If less than m, we must raise
     nmeta = np.count_nonzero(chi.sum(axis=0))
-    if (m >= nmeta):
+    if (m > nmeta):
         raise ValueError(str(m) + " macrostates requested, but transition matrix only has " + str(nmeta)
                          + " macrostates. Request less macrostates.")
 
