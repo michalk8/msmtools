@@ -471,7 +471,7 @@ def _opt_soft(X, rot_matrix):
     rot_matrix = _fill_matrix(rot_matrix, X)
     
     # Compute the membership matrix.
-    chi = np.dot(X, rot_mat)
+    chi = np.dot(X, rot_matrix)
 
     return (rot_matrix, chi, fopt)
   
