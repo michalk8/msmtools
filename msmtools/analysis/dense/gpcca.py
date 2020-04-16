@@ -189,7 +189,7 @@ def _do_schur(P, eta, m):
     P_bar = np.diag(np.sqrt(eta)).dot(P).dot(np.diag(1./np.sqrt(eta)))
 
     # Make a Schur decomposition of P_bar.
-    R, Q = schur(P,output='real') #TODO: Implement Krylov-Schur (sorted partial Schur decomposition)
+    R, Q = schur(P,output='real') #TODO: 1. Use sort keyword of schur instead of sort_real_schur? 2. Implement Krylov-Schur (sorted partial Schur decomposition)
 
     # Warnings
     if m - 1 not in _find_twoblocks(R):
