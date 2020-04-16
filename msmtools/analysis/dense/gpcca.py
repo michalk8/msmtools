@@ -169,6 +169,7 @@ def _do_schur(P, eta, m):
     """
     
     from scipy.linalg import schur
+    from scipy.linalg import subspace_angles
     from msmtools.util.sort_real_schur import sort_real_schur
     
     # Exeptions
