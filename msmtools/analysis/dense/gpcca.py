@@ -189,7 +189,7 @@ def _do_schur(P, eta, m):
     P_bar = np.diag(np.sqrt(eta)).dot(P).dot(np.diag(1./np.sqrt(eta)))
 
     # Make a Schur decomposition of P_bar.
-    R, Q = schur(P,output='real')
+    R, Q = schur(P,output='real') #TODO: Implement Krylov-Schur (sorted partial Schur decomposition)
 
     # Warnings
     if m - 1 not in _find_twoblocks(R):
@@ -455,7 +455,7 @@ def _opt_soft(X, rot_matrix):
     # Now reshape rot_crop_matrix into a linear vector alpha.
     k = m - 1
     alpha = np.reshape(rot_crop_matrix,  k**2)
-
+    #TODO: Implement Gauss Newton Optimization to speed things up esp. for m > 10
     alpha, fopt, _, _, _, _ = fmin(_objective, alpha, args=(X,), full_output=True, disp=False)
 
     # Now reshape alpha into a (k,k)-matrix.
@@ -607,7 +607,7 @@ def gpcca(P, eta, m):
                          + str(n_closed_components) + " disconnected components")
     #-----------------
     
-    X, _ = _do_schur(P, eta, m)
+    X, _ = _do_schur(P, eta, m) #TODO: Enable loading of sorted Schur vectors from file!
 
     rot_mat = _initialize_rot_matrix(X)
     
