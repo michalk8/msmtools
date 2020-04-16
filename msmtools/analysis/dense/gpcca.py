@@ -66,14 +66,14 @@ def _find_twoblocks(R):
     return validclusters
   
   
-def _gram_schmidt_mod(Q, eta):
+def _gram_schmidt_mod(X, eta):
     r"""
     Function to :math:`\eta`-orthonormalize Schur vectors - modified numerically stable version.
     
     Parameters
     ----------
-    Q : ndarray (n,n)
-        Matrix consisting columnwise of the Schur vectors of 
+    X : ndarray (n,m)
+        Matrix consisting columnwise of the ``m`` dominant Schur vectors of 
         :math:`\tilde{P} = \mathtt{diag}(\sqrt{\eta}) P \mathtt{diag}(1.0. / \sqrt{eta})`.
         
     eta : ndarray (n,) 
@@ -81,55 +81,56 @@ def _gram_schmidt_mod(Q, eta):
         
     Returns
     -------
-    Q : ndarray (n,n)
-        Matrix with orthonormalized  Schur vectors of :math:`\tilde{P}` and a constant 
-        vector with elements equal :math:`\sqrt{eta}` on the first column.
+    Q : ndarray (n,m)
+        Matrix with the orthonormalized ``m`` dominant Schur vectors of :math:`\tilde{P}`.
+        The elements of the first column are constantly equal :math:`\sqrt{eta}`.
     
     """
     from scipy.linalg import subspace_angles
     
-    # Initialize matrices.
-    m, n = Q.shape
-    Q = np.zeros((m,n))
-    R = np.zeros((n,n))
     # Keep copy of the original (Schur) vectors for later sanity check.
-    Q_copy = np.copy(Q)
+    Xc = np.copy(X)
+    
+    # Initialize matrices.
+    n, m = X.shape
+    Q = np.zeros((n,m))
+    R = np.zeros((m,m))
     
     # Search for the constant (Schur) vector, if explicitly present.
-    max_i = 1
-    for i in range(n):
-        vsum = np.sum(Q[:,i])
-        dummy = np.abs( Q[:,i] - ( np.ones(Q[:,i].shape) * (vsum / m) ))
-        if np.all(dummy < ( 1e6 * eps )):  
+    max_i = 0
+    for i in range(m):
+        vsum = np.sum(X[:,i])
+        dummy = ( np.ones(X[:,i].shape) * (vsum / n) )
+        if np.allclose(X[:,i], dummy, rtol=1e6*eps, atol=1e6*eps ):  
             max_i = i
         
     # Shift non-constant first (Schur) vector to the right.
-    Q[:,max_i] = Q[:,0]
+    X[:,max_i] = X[:, 0]
     # Set first (Schur) vector equal sqrt(eta) (In _do_schur() the Q-matrix, orthogonalized by 
     # _gram_schmidt_mod(), will be multiplied with 1.0./sqrt(eta) - so the first (Schur) vector will 
     # become the unit vector 1!).
-    Q[:,0] = np.sqrt(eta)
-    # Raise, if the subspace changed!
-    if not ( subspace_angles(Q, Q_copy) < 1e8 * eps ):
+    X[:, 0] = np.sqrt(eta)
+    # Raise, if the subspace changed! TODO: Mb test rank instead?
+    if not ( subspace_angles(X, Xc)[0] < 1e8 * eps ): 
         raise ValueError("The subspace of Q derived by shifting a non-constant first (Schur)vector "
                          "to the right and setting the first (Schur) vector equal sqrt(eta) doesn't "
                          "match the subspace of the original Q!")
     
     # eta-orthonormalization
-    for j in range(n):
-        v = Q[:,j] ;
-        for i in range(j-1):
-            R[i,j] = np.dot(Q[:,i].conj().T, v)
+    for j in range(m):
+        v = X[:,j] ;
+        for i in range(j):
+            R[i,j] = np.dot(Q[:,i].conj(), v)
             v = v - np.dot(R[i,j], Q[:,i])
         R[j,j] = np.linalg.norm(v) ;
-        Q[:,j] = v / R[j,j]
-        
-    # Raise, if the subspace changed!
-    if not ( subspace_angles(Q, Q_copy) < 1000000 * eps ):
+        Q[:,j] = np.true_divide(v, R[j,j])
+
+    # Raise, if the subspace changed! TODO: Mb test rank instead?
+    if not ( subspace_angles(Q, Xc)[0] < 1e8 * eps ):
         raise ValueError("The subspace of Q derived by eta-orthogonalization doesn't match the "
                          + "subspace of the original Q!")
     # Raise, if the (Schur)vectors aren't orthogonal!
-    if not numpy.allclose(Q.conj().T.dot(Q), np.eye(Q.shape[1]), rtol=10000*eps, atol=10000*eps):
+    if not np.allclose(Q.conj().T.dot(Q), np.eye(Q.shape[1]), rtol=1e6*eps, atol=1e6*eps):
         raise ValueError("(Schur)vectors appear to not be orthogonal!")
     
     return Q
