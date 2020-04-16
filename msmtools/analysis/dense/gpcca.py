@@ -323,7 +323,7 @@ def _initialize_rot_matrix(X):
     
     """
     # Search start simplex vertices ('inner simplex algorithm').
-    index = indexsearch(X)
+    index = _indexsearch(X)
     
     # Local copy of the Schur vectors.
     Xc = np.copy(X)
