@@ -262,7 +262,7 @@ def _objective(alpha, X):
     k = m - 1   
     
     # Initialize rotation matrix.
-    rot_matrix = np.zeros((k, k))
+    rot_matrix = np.zeros((m, m))
     
     # Sanity checks.
     if not (alpha.shape[0] == k**2):
