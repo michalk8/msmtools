@@ -728,11 +728,11 @@ class GPCCA(object):
         # G-PCCA coarse-graining
         # --------------------
         # G-PCCA memberships
-        self._M, self._crispness = gpcca(P, eta, m)
+        self._M, self._crispness = gpcca(self.P, self.eta, self.m)
 
         ## stationary distribution
         #from msmtools.analysis import stationary_distribution as _pi
-        #self._pi = _pi(P)
+        #self._pi = _pi(self.P)
 
         ## coarse-grained stationary distribution
         #self._pi_coarse = np.dot(self._M.T, self._pi)
@@ -742,7 +742,7 @@ class GPCCA(object):
 
         # coarse-grain transition matrix 
         W = np.linalg.pinv(np.dot(self._M.T, np.diag(self.eta)).dot(self._M))
-        A = np.dot(self._M.T, np.diag(self.eta)).dot(P).dot(self._M)
+        A = np.dot(self._M.T, np.diag(self.eta)).dot(self.P).dot(self._M)
         self._P_coarse = W.dot(A)
 
     @property
