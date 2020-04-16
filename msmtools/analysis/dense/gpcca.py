@@ -377,7 +377,7 @@ def _indexsearch(X):
     # local copy of the eigenvectors
     ortho_sys = np.copy(X)
 
-    index = np.zeros(m)
+    index = np.zeros(m, dtype=np.int32)
     max_dist = 0.0                     
     
     # First vertex: row with largest norm.
