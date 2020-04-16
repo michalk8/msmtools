@@ -510,7 +510,7 @@ def _fill_matrix(rot_matrix, X):
     rot_matrix[0, :] = np.max(dummy, axis=0)
 
     # Reskale rot_mat to be in the feasible set.
-    rot_matrix = rot_matrix / np.sum(rot_mat[0, :])
+    rot_matrix = rot_matrix / np.sum(rot_matrix[0, :])
 
     # Make sure, that there are no zero or negative elements in the first row of A.
     if np.any(rot_matrix[0, :] == 0):
