@@ -616,7 +616,7 @@ def gpcca(P, eta, m):
 
     rot_mat = _initialize_rot_matrix(X)
     
-    chi, rot_mat, fopt = _opt_soft(rot_mat, X)
+    _, chi, fopt = _opt_soft(X, rot_mat)
                          
     # calculate crispness of the decomposition of the state space into m clusters
     crispness = (m - fopt) / m
