@@ -218,11 +218,14 @@ def _do_schur(P, eta, m):
     if not X.shape[0] == N1:
         raise ValueError("The number of rows n=%d of the Schur vector matrix X doesn't match those (n=%d) of P!" 
                          % (X.shape[0], P.shape[0]))
-    # Raise, if the (Schur)vectors aren't orthogonal!
-    if not np.allclose(X.conj().T.dot(np.diag(eta)).dot(X), np.eye(X.shape[1]), rtol=10000*eps, atol=10000*eps):
-        raise ValueError("Schur vectors appear to not be orthogonal!")
+    # Raise, if the (Schur)vectors aren't D-orthogonal (don't fullfill the orthogonality condition)!
+    if not np.allclose(X.conj().T.dot(np.diag(eta)).dot(X), np.eye(X.shape[1]), rtol=1e6*eps, atol=1e6*eps):
+        raise ValueError("Schur vectors appear to not be D-orthogonal!")
+    # Raise, if X doesn't fullfill the invariant subspace condition!
+    if not ( subspace_angles(np.dot(P, X), np.dot(X, R))[0] < 1e8 * eps ):
+        raise ValueError("X doesn't span a invariant subspace of P!")
     # Raise, if the first column X[:,0] of the Schur vector matrix isn't constantly equal 1!
-    if not np.all(np.abs(X[:,0] - 1) < (1000 * eps)):
+    if not np.allclose(X[:,0], np.ones(X[:,0].shape), rtol=1e6*eps, atol=1e6*eps):
         raise ValueError("The first column X[:,0] of the Schur vector matrix isn't constantly equal 1!")
                   
     return X, R
