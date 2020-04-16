@@ -672,7 +672,7 @@ def coarsegrain(P, eta, m):
     
     """                  
     #Matlab: Pc = pinv(chi'*diag(eta)*chi)*(chi'*diag(eta)*P*chi)
-    chi = gpcca(P, eta, m)
+    chi, _ = gpcca(P, eta, m)
     W = np.linalg.pinv(np.dot(chi.T, np.diag(eta)).dot(chi))
     A = np.dot(chi.T, np.diag(eta)).dot(P).dot(chi)
     P_coarse = W.dot(A)
@@ -727,7 +727,7 @@ class GPCCA(object):
         # G-PCCA coarse-graining
         # --------------------
         # G-PCCA memberships
-        self._M = gpcca(P, eta, m)
+        self._M, self._crispness = gpcca(P, eta, m)
 
         ## stationary distribution
         #from msmtools.analysis import stationary_distribution as _pi
@@ -763,6 +763,10 @@ class GPCCA(object):
     @property
     def memberships(self):
         return self._M
+    
+    @property
+    def cluster_crispness(self):
+        return self._crispness
 
     @property
     def coarse_grained_transition_matrix(self):
