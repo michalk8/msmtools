@@ -402,7 +402,7 @@ def _indexsearch(X):
             if distt > max_dist: #and i not in index[0:j]: #in _pcca_connected_isa() of pcca.py
                 max_dist = distt
                 index[j] = i
-        ortho_sys /= maxdist
+        ortho_sys /= max_dist
         # Attention: In the _pcca_connected_isa() function in pcca.py of MSMTools
         # they use a slightly different form:
         # ortho_sys /= np.linalg.norm(ortho_sys[index[j]], 2)
