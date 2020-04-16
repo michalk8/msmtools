@@ -461,7 +461,7 @@ def _opt_soft(X, rot_matrix):
     k = m - 1
     alpha = np.reshape(rot_crop_matrix,  k**2)
     #TODO: Implement Gauss Newton Optimization to speed things up esp. for m > 10
-    alpha, fopt, _, _, _, _ = fmin(_objective, alpha, args=(X,), full_output=True, disp=False)
+    alpha, fopt, _, _, _ = fmin(_objective, alpha, args=(X,), full_output=True, disp=False)
 
     # Now reshape alpha into a (k,k)-matrix.
     rot_crop_matrix = np.reshape(alpha, (k, k))
