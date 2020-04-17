@@ -770,6 +770,10 @@ class GPCCA(object):
         return self._M
     
     @property
+    def rotation_matrix(self):
+        return self._M
+    
+    @property
     def cluster_crispness(self):
         return self._crispness
 
