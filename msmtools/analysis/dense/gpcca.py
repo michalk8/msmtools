@@ -278,8 +278,8 @@ def _objective(alpha, X):
     rot_matrix = _fill_matrix(rot_matrix, X)
 
     # Compute value of the objective function.
-    # from Matlab: optval = k - trace( diag(1 ./ A(1,:)) * (A' * A) )
-    optval = k - np.trace( np.diag(np.true_divide(1.0, rot_matrix[0, :])).dot(rot_matrix.conj().T.dot(rot_matrix)) )
+    # from Matlab: optval = m - trace( diag(1 ./ A(1,:)) * (A' * A) )
+    optval = m - np.trace( np.diag(np.true_divide(1.0, rot_matrix[0, :])).dot(rot_matrix.conj().T.dot(rot_matrix)) )
     
     # Attention: Our definition of the objective function seems to differ from those used in MSMTools pcca.py!
     # They seem to use -result (from susanna_func() below in their _opt_soft()) for optimization in fmin, 
