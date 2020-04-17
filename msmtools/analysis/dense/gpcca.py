@@ -430,7 +430,7 @@ def _opt_soft(X, rot_matrix):
         The rows sum to 1.
     
     rot_mat : ndarray (m,m)
-        Optimized rotation matrix that rotates the dominant eigenvectors to yield the G-PCCA memberships, 
+        Optimized rotation matrix that rotates the dominant Schur vectors to yield the G-PCCA memberships, 
         i.e., ``chi = X * rot_mat``.
         
     fopt : float (double)
@@ -543,6 +543,10 @@ def gpcca(P, eta, m):
 
     Returns
     -------
+    rot_mat : ndarray (m,m)
+        Optimized rotation matrix that rotates the dominant Schur vectors to yield the G-PCCA memberships, 
+        i.e., ``chi = X * rot_mat``.
+        
     chi : ndarray (n,m)
         A matrix containing the membership (or probability) of each state (to be assigned) 
         to each cluster. The rows sum up to 1.
@@ -614,9 +618,9 @@ def gpcca(P, eta, m):
     
     X, _ = _do_schur(P, eta, m) #TODO: Enable loading of sorted Schur vectors from file!
 
-    rot_mat = _initialize_rot_matrix(X)
+    rot_matrix = _initialize_rot_matrix(X)
     
-    _, chi, fopt = _opt_soft(X, rot_mat)
+    rot_matrix, chi, fopt = _opt_soft(X, rot_matrix)
                          
     # calculate crispness of the decomposition of the state space into m clusters
     crispness = (m - fopt) / m
@@ -627,7 +631,7 @@ def gpcca(P, eta, m):
         raise ValueError(str(m) + " macrostates requested, but transition matrix only has " + str(nmeta)
                          + " macrostates. Request less macrostates.")
 
-    return (chi, crispness)
+    return (rot_matrix, chi, crispness)
 
 
 def coarsegrain(P, eta, m):
@@ -677,7 +681,7 @@ def coarsegrain(P, eta, m):
     
     """                  
     #Matlab: Pc = pinv(chi'*diag(eta)*chi)*(chi'*diag(eta)*P*chi)
-    chi, _ = gpcca(P, eta, m)
+    _, chi, _ = gpcca(P, eta, m)
     W = np.linalg.pinv(np.dot(chi.T, np.diag(eta)).dot(chi))
     A = np.dot(chi.T, np.diag(eta)).dot(P).dot(chi)
     P_coarse = W.dot(A)
@@ -732,7 +736,7 @@ class GPCCA(object):
         # G-PCCA coarse-graining
         # --------------------
         # G-PCCA memberships
-        self._M, self._crispness = gpcca(self.P, self.eta, self.m)
+        self._rot_matrix, self._M, self._crispness = gpcca(self.P, self.eta, self.m)
 
         ## stationary distribution
         #from msmtools.analysis import stationary_distribution as _pi
@@ -771,7 +775,7 @@ class GPCCA(object):
     
     @property
     def rotation_matrix(self):
-        return self._M
+        return self._rot_matrix
     
     @property
     def cluster_crispness(self):
