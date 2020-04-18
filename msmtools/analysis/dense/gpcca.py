@@ -743,7 +743,7 @@ class GPCCA(object):
         self._pi_coarse = np.dot(self._M.T, self._pi)
                          
         ## coarse-grained input (initial) distribution of states
-        self.eta_coarse = np.dot(self._M.T, self.eta)
+        self._eta_coarse = np.dot(self._M.T, self.eta)
 
         # coarse-grain transition matrix 
         W = np.linalg.pinv(np.dot(self._M.T, np.diag(self.eta)).dot(self._M))
@@ -788,7 +788,7 @@ class GPCCA(object):
                          
     @property
     def coarse_grained_input_distribution(self):
-        return self.eta_coarse
+        return self._eta_coarse
 
     @property
     def metastable_assignment(self):
