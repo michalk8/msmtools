@@ -565,7 +565,7 @@ def _cluster_by_isa(X):
     return (chi, minChi)
 
 
-def _use_minChi(P, eta, m_min, m_max):
+def use_minChi(P, eta, m_min, m_max):
     """
     Parameters
     ----------
@@ -588,16 +588,7 @@ def _use_minChi(P, eta, m_min, m_max):
         
     Returns
     -------
-    X : ndarray (n,m)
-        Matrix with ``m`` sorted Schur vectors in the columns.
-        The constant Schur vector is in the first column.
-        
-    R : ndarray (m,m)
-        Sorted real (partial) Schur matrix `R` of `P` such that
-        :math:`\tilde{P} Q = Q R` with the sorted (partial) matrix 
-        of Schur vectors :math:`Q` holds.
-        
-     minChi_list : list of ``m_max - m_min`` floats (double)
+    minChi_list : list of ``m_max - m_min`` floats (double)
         List of minChi indicators for cluster numbers :math:`m \in [m_{min},m_{max}], see [1]_ and [2]_.
         
     References
