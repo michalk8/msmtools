@@ -825,8 +825,10 @@ class GPCCA(object):
         In case of a reversible transition matrix, 
         use the stationary probability distribution ``pi`` here.
 
-    m : int
-        Number of clusters (macrostates) to group the n microstates into.
+    m_sort : int
+        Number of dominant Schur vectors to sort.
+        ATTENTION: Should be equal to the maximal number of clusters used
+        during cluster number optimization (via the methods `use_minChi` and/or `optimize`).
         
     Properties:
     -----------
@@ -912,37 +914,81 @@ class GPCCA(object):
 
     """
 
-    def __init__(self, P, eta, m):
+    def __init__(self, P, eta, m_sort):
         if issparse(P):
             warnings.warn("gpcca is only implemented for dense matrices, "
                           + "converting sparse transition matrix to dense ndarray.")
             P = P.toarray()
         self.P = P
         self.eta = eta
-        self.m = m
-
-        # G-PCCA coarse-graining
-        # --------------------
-        # G-PCCA memberships
-        self._M, self._rot_matrix, self._X, self._R, self._crispness = gpcca(self.P, self.eta, self.m, 
-                                                                             full_output=True)
+        if m_sort in [0,1]:
+            raise ValueError("There is no point in clustering into", str(m), "clusters!")
+        self.m_sort = m_sort
+        self.X, self.R = _do_schur(P, eta, m_sort)
+        
+    # G-PCCA coarse-graining   
+    # G-PCCA memberships
+        #self._M, self._rot_matrix, self._X, self._R, self._crispness = gpcca(self.P, self.eta, self.m, full_output=True)
+    def optimize(self, m):
+        
+        if isinstance(m, dict):
+            m_min = m.get('m_min', None)
+            m_max = m.get('m_max', None)
+            if not (m_min < m_max):
+                raise ValueError("m_min !< m_max")
+            m_list = [m_min, m_max]
+        elif isinstance(m, int):
+            self.m = m
+            m_list = [m]
+        
+        if max(m_list) < m_sort:
+            X, R = _do_schur(P, eta, max(m_list))
+        else:
+            X = self.X
+            R = self.R
+            
+        chi_list = []
+        rot_matrix_list = []
+        crispness_list = []
+        for m in range(min(m_list), max(m_list) + 1):
+            Rm = R[:m, :m]
+            if m - 1 not in _find_twoblocks(Rm):
+                warnings.warn("Coarse-graining with " + str(m) + " states cuts through a block of "
+                              + "complex conjugate eigenvalues in the Schur form. The result will "
+                              + "be of questionable meaning. "
+                              + "Please increase/decrease number of states by one.")
+            Xm = np.copy(self.X[:, :m])
+            chi, rot_matrix, crispness = gpcca_core(Xm)
+            chi_list.append(chi)
+            rot_matrix_list.append(rot_matrix)
+            crispness_list.append(crispness)
+            
+        opt_idx = np.argmax(crispness_list)
+        m_opt = m_min + opt_idx
+        self._chi
+        self._rot_matrix
+        self._X
+        self._R
+        self._crispness
 
         # stationary distribution
         from msmtools.analysis import stationary_distribution as _stationary_distribution
         try:
             self._pi = _stationary_distribution(self.P)
             # coarse-grained stationary distribution
-            self._pi_coarse = np.dot(self._M.T, self._pi)
+            self._pi_coarse = np.dot(self._chi.T, self._pi)
         except ValueError as err:
             print("Stationary distribution couldn't be calculated:", err)
                          
         ## coarse-grained input (initial) distribution of states
-        self._eta_coarse = np.dot(self._M.T, self.eta)
+        self._eta_coarse = np.dot(self._chi.T, self.eta)
 
         # coarse-grain transition matrix 
-        W = np.linalg.pinv(np.dot(self._M.T, np.diag(self.eta)).dot(self._M))
-        A = np.dot(self._M.T, np.diag(self.eta)).dot(self.P).dot(self._M)
+        W = np.linalg.pinv(np.dot(self._chi.T, np.diag(self.eta)).dot(self._chi))
+        A = np.dot(self._chi.T, np.diag(self.eta)).dot(self.P).dot(self._chi)
         self._P_coarse = W.dot(A)
+        
+        return self
 
     @property
     def transition_matrix(self):
@@ -954,7 +1000,7 @@ class GPCCA(object):
 
     @property
     def n_metastable(self):
-        return self.m
+        return self.m_opt
     
     @property
     def stationary_probability(self):
@@ -962,7 +1008,7 @@ class GPCCA(object):
 
     @property
     def memberships(self):
-        return self._M
+        return self._chi
     
     @property
     def rotation_matrix(self):
