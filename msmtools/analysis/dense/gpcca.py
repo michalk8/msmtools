@@ -712,11 +712,81 @@ class GPCCA(object):
         Transition matrix (row-stochastic).
         
     eta : ndarray (n,) 
-        Input (initial) distribution of states.
+        Input distribution of states.
         In case of a reversible transition matrix, use the stationary distribution ``pi`` here.
 
     m : int
-        Number of clusters to group into.
+        Number of clusters (macrostates) to group the n microstates into.
+        
+    Properties:
+    -----------
+    
+    transition_matrix : ndarray (n,n)
+        Transition matrix (row-stochastic).
+
+    input_distribution : ndarray (n,)
+        Input distribution of the (micro)states.
+        In case of a reversible transition matrix, use the stationary distribution ``pi`` here.
+
+    n_metastable : int
+        Number of clusters (macrostates) to group the n microstates into.
+    
+    stationary_probability : ndarray (n,)
+        The stationary distribution of (micro)states given as vector of stationary probabilities.
+
+    memberships : ndarray (n,m)
+        A matrix containing the membership (or probability) of each state (to be assigned) 
+        to each cluster. The rows sum up to 1.
+    
+    rotation_matrix : ndarray (m,m)
+        Optimized rotation matrix that rotates the dominant Schur vectors to yield the G-PCCA memberships, 
+        i.e., ``chi = X * rot_matrix``.
+    
+    schur_vectors : ndarray (n,m)
+        Matrix with ``m`` sorted Schur vectors in the columns.
+        The constant Schur vector is in the first column.
+    
+    schur_matrix : ndarray (m,m)
+        Sorted real (partial) Schur matrix `R` of `P` such that
+        :math:`\tilde{P} Q = Q R` with the sorted (partial) matrix 
+        of Schur vectors :math:`Q` holds.
+    
+    cluster_crispness : float (double)
+        The crispness :math:`\xi \in [0,1]` quantifies the optimality of the solution (higher is better). 
+        It characterizes how crisp (sharp) the decomposition of the state space into `m` clusters is.
+        It is given via (Eq. 17 from [2]_):
+        
+        ..math: \xi = (m - f_{opt}) / m = \mathtt{trace}(S) / m = \mathtt{trace}(\tilde{D} \chi^T D \chi) / m -> \mathtt{max}
+        
+        with :math:`D` being a diagonal matrix with `eta` on its diagonal.
+
+    coarse_grained_transition_matrix : ndarray (m,m)
+        Coarse grained transition matrix: 
+        ..math: P_c = (\chi^T D \chi)^{-1} (\chi^T D P \chi)
+        with :math:`D` being a diagonal matrix with `eta` on its diagonal.
+
+    coarse_grained_stationary_probability : ndarray (m,)
+        Coarse grained stationary distribution:
+        ..math: \pi_c = \chi^T \pi
+
+    coarse_grained_input_distribution : ndarray (m,)
+        Coarse grained input distribution:
+        ..math: \eta_c = \chi^T \eta
+
+    metastable_assignment : ndarray (n,)
+        The metastable state each microstate is located in.
+        CAUTION: Crisp clustering using G-PCCA. 
+        This is only recommended for visualization purposes. 
+        You *cannot* compute any actual quantity of the coarse-grained kinetics 
+        without employing the fuzzy memberships!
+
+    metastable_sets : list of ndarrays
+        A list of length equal to the number of metastable states. 
+        Each element is an array with microstate indexes contained in it.
+        CAUTION: Crisp clustering using G-PCCA. 
+        This is only recommended for visualization purposes. 
+        You *cannot* compute any actual quantity of the coarse-grained kinetics 
+        without employing the fuzzy memberships!
         
     References:
     -----------
