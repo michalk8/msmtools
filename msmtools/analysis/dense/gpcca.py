@@ -193,17 +193,16 @@ def _do_schur(P, eta, m):
     # Make a Schur decomposition of P_bar.
     R, Q = schur(P_bar,output='real') #TODO: 1. Use sort keyword of schur instead of sort_real_schur? 2. Implement Krylov-Schur (sorted partial Schur decomposition)
 
+    # Sort the Schur matrix and vectors.
+    Q, R, ap = sort_real_schur(Q, R, z=np.inf, b=m)
     # Warnings
+    if np.any(np.array(ap) > 1.0):
+        warnings.warn("Reordering of Schur matrix was inaccurate!")
     if m - 1 not in _find_twoblocks(R):
         warnings.warn("Coarse-graining with " + str(m) + " states cuts through a block of "
                       + "complex conjugate eigenvalues in the Schur form. The result will "
                       + "be of questionable meaning. "
                       + "Please increase/decrease number of states by one.")
-
-    # Sort the Schur matrix and vectors.
-    Q, R, ap = sort_real_schur(Q, R, z=np.inf, b=m)
-    if np.any(np.array(ap) > 1.0):
-        warnings.warn("Reordering of Schur matrix was inaccurate!")
         
     # Since the Schur form R and Schur vectors are only partially
     # sorted, one doesn't need the whole R and Schur vector matrix Q.
