@@ -623,6 +623,115 @@ def use_minChi(P, eta, m_min, m_max):
     return (X, R, minChi_list)
 
 
+def _gpcca_core(P, X):
+    r"""
+    G-PCCA [1]_ spectral clustering method with optimized memberships.
+
+    Clusters the dominant m Schur vectors of a transition matrix.
+    This algorithm generates a fuzzy clustering such that the resulting membership functions 
+    are as crisp (characteristic) as possible.
+
+    Parameters
+    ----------
+    P : ndarray (n,n)
+        Transition matrix (row-stochastic).
+        
+    X : ndarray (n,m)
+        Matrix with ``m`` sorted Schur vectors in the columns.
+        The constant Schur vector is in the first column.
+
+    Returns
+    -------
+    chi : ndarray (n,m)
+        A matrix containing the membership (or probability) of each state (to be assigned) 
+        to each cluster. The rows sum up to 1.
+        
+    rot_matrix : ndarray (m,m)
+        Optimized rotation matrix that rotates the dominant Schur vectors to yield the G-PCCA memberships, 
+        i.e., ``chi = X * rot_matrix``.
+        
+    crispness : float (double)
+        The crispness :math:`\xi \in [0,1]` quantifies the optimality of the solution (higher is better). 
+        It characterizes how crisp (sharp) the decomposition of the state space into `m` clusters is.
+        It is given via (Eq. 17 from [2]_):
+        
+        ..math: \xi = (m - f_{opt}) / m = \mathtt{trace}(S) / m = \mathtt{trace}(\tilde{D} \chi^T D \chi) / m -> \mathtt{max}
+        
+        with :math:`D` being a diagonal matrix with `eta` on its diagonal.
+        
+    References
+    ----------
+    .. [1] Reuter, B., Weber, M., Fackeldey, K., Röblitz, S., & Garcia, M. E. (2018). Generalized
+           Markov State Modeling Method for Nonequilibrium Biomolecular Dynamics: Exemplified on
+           Amyloid β Conformational Dynamics Driven by an Oscillating Electric Field. Journal of
+           Chemical Theory and Computation, 14(7), 3579–3594. https://doi.org/10.1021/acs.jctc.8b00079
+
+    .. [2] S. Roeblitz and M. Weber, Fuzzy spectral clustering by PCCA+:
+           application to Markov state models and data classification.
+           Adv Data Anal Classif 7, 147-179 (2013).
+           https://doi.org/10.1007/s11634-013-0134-6
+
+    Copyright (c) 2020 Bernhard Reuter, Susanna Roeblitz and Marcus Weber, 
+    Zuse Institute Berlin, Takustrasse 7, 14195 Berlin
+    ----------------------------------------------
+    If you use this code or parts of it, cite [1]_.
+    ----------------------------------------------
+    
+    """
+    # imports
+    from msmtools.estimation import connected_sets
+    from msmtools.analysis import eigenvalues, is_transition_matrix
+
+    # validate input
+    n = np.shape(P)[0]
+    m = np.shape(X)[1]
+    if (m > n):
+        raise ValueError("Number of macrostates m = " + str(m)+
+                         " exceeds number of states of the transition matrix n = " + str(n) + ".")
+    if not is_transition_matrix(P):
+        raise ValueError("Input matrix is not a transition matrix.")
+
+    # prepare output
+    chi = np.zeros((n, m))
+    
+    #---------------keep?
+    # test connectivity
+    components = connected_sets(P)
+    n_components = len(components)
+
+    # Store components as closed (with positive equilibrium distribution)
+    # or as transition states (with vanishing equilibrium distribution).
+    closed_components = []
+    for i in range(n_components):
+        component = components[i]
+        rest = list(set(range(n)) - set(component))
+        # is component closed?
+        if (np.sum(P[component, :][:, rest]) == 0):
+            closed_components.append(component)
+    n_closed_components = len(closed_components)
+
+    # Check, if we have enough clusters to support the disconnected sets.
+    if (m < n_closed_components):
+        warnings.warn("Number of metastable states m = " + str(m) + " is too small. Transition matrix has "
+                      + str(n_closed_components) + " disconnected components")
+    #-----------------
+
+    rot_matrix = _initialize_rot_matrix(X)
+    
+    rot_matrix, chi, fopt = _opt_soft(X, rot_matrix)
+                         
+    # calculate crispness of the decomposition of the state space into m clusters
+    crispness = (m - fopt) / m
+
+    # check if we have at least m dominant sets. If less than m, we must raise
+    nmeta = np.count_nonzero(chi.sum(axis=0))
+    if (m > nmeta):
+        raise ValueError(str(m) + " macrostates requested, but transition matrix only has " + str(nmeta)
+                         + " macrostates. Request less macrostates.")
+
+    return (chi, rot_matrix, crispness)
+
+
 def gpcca(P, eta, m, full_output=False):
     r"""
     G-PCCA [1]_ spectral clustering method with optimized memberships.
@@ -958,7 +1067,7 @@ class GPCCA(object):
                               + "be of questionable meaning. "
                               + "Please increase/decrease number of states by one.")
             Xm = np.copy(self.X[:, :m])
-            chi, rot_matrix, crispness = gpcca_core(Xm)
+            chi, rot_matrix, crispness = _gpcca_core(self.P, Xm)
             chi_list.append(chi)
             rot_matrix_list.append(rot_matrix)
             crispness_list.append(crispness)
