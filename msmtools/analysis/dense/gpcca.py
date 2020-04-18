@@ -517,6 +517,89 @@ def _fill_matrix(rot_matrix, X):
     return rot_matrix
 
 
+def _cluster_by_isa(X):
+    """
+    Classification of dynamical data based on ``m`` orthonormal Schur vectors 
+    of the (row-stochastic) transition matrix. Hereby ``m`` determines the number 
+    of clusters to cluster the data into. The applied method is the Inner Simplex Algorithm (ISA).
+    Constraint: Evs matrix needs to contain at least ``m`` Schurvectors.
+    This function assumes that the state space is fully connected.
+
+    Parameters
+    ----------
+    X : ndarray (n,m)
+        A matrix with ``m`` sorted Schur vectors in the columns. The constant Schur vector should be first.
+
+    Returns
+    -------
+    chi : ndarray (n,m)
+        Matrix containing the probability or membership of each state to be assigned to each cluster.
+        The rows sum to 1.
+        
+    minChi : float (double)
+        minChi indicator, see [1]_ and [2]_.
+        
+    References
+    ----------
+    .. [1] S. Roeblitz and M. Weber, Fuzzy spectral clustering by PCCA+:
+           application to Markov state models and data classification.
+           Adv Data Anal Classif 7, 147-179 (2013).
+           https://doi.org/10.1007/s11634-013-0134-6
+
+    .. [2] Reuter, B., Weber, M., Fackeldey, K., Röblitz, S., & Garcia, M. E. (2018). Generalized
+           Markov State Modeling Method for Nonequilibrium Biomolecular Dynamics: Exemplified on
+           Amyloid β Conformational Dynamics Driven by an Oscillating Electric Field. Journal of
+           Chemical Theory and Computation, 14(7), 3579–3594. https://doi.org/10.1021/acs.jctc.8b00079
+           
+    """
+    
+    # compute rotation matrix
+    rot_matrix = _initialize_rot_matrix(X)
+    
+    # Compute the membership matrix.
+    chi = np.dot(X, rot_matrix)
+    
+    # compute the minChi indicator
+    minChi = np.amin(chi)
+    
+    return (chi, minChi)
+
+
+def _use_minChi(X, m_min, m_max):
+    """
+    Parameters
+    ----------
+    X : ndarray (n,m)
+        A matrix with ``m`` sorted Schur vectors in the columns. The constant Schur vector should be first.
+
+    Returns
+    -------
+     minChi_list : list of ``m_max - m_min`` floats (double)
+        List of minChi indicators for cluster numbers :math:`m \in [m_{min},m_{max}], see [1]_ and [2]_.
+        
+    References
+    ----------
+    .. [1] S. Roeblitz and M. Weber, Fuzzy spectral clustering by PCCA+:
+           application to Markov state models and data classification.
+           Adv Data Anal Classif 7, 147-179 (2013).
+           https://doi.org/10.1007/s11634-013-0134-6
+
+    .. [2] Reuter, B., Weber, M., Fackeldey, K., Röblitz, S., & Garcia, M. E. (2018). Generalized
+           Markov State Modeling Method for Nonequilibrium Biomolecular Dynamics: Exemplified on
+           Amyloid β Conformational Dynamics Driven by an Oscillating Electric Field. Journal of
+           Chemical Theory and Computation, 14(7), 3579–3594. https://doi.org/10.1021/acs.jctc.8b00079
+        
+    """
+    
+    minChi_list = []
+    for m in range(m_min, m_max + 1):
+        Xm = np.copy(X[:, :m])
+        _, minChi = cluster_by_isa(Xm)
+        minChi_list.append(minChi)
+        
+    return minChi_list
+
+
 def gpcca(P, eta, m, full_output=False):
     r"""
     G-PCCA [1]_ spectral clustering method with optimized memberships.
