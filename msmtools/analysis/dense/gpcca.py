@@ -823,10 +823,12 @@ class GPCCA(object):
 
         # stationary distribution
         from msmtools.analysis import stationary_distribution as _stationary_distribution
-        self._pi = _stationary_distribution(self.P)
-
-        # coarse-grained stationary distribution
-        self._pi_coarse = np.dot(self._M.T, self._pi)
+        try:
+            self._pi = _stationary_distribution(self.P)
+            # coarse-grained stationary distribution
+            self._pi_coarse = np.dot(self._M.T, self._pi)
+        except ValueError as err:
+            print("Stationary distribution couldn't be calculated:", err)
                          
         ## coarse-grained input (initial) distribution of states
         self._eta_coarse = np.dot(self._M.T, self.eta)
