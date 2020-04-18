@@ -712,8 +712,12 @@ class GPCCA(object):
         Transition matrix (row-stochastic).
         
     eta : ndarray (n,) 
-        Input distribution of states.
-        In case of a reversible transition matrix, use the stationary distribution ``pi`` here.
+        Input probability distribution of the (micro)states.
+        In theory this can be an arbitray distribution as long as it is 
+        a valid probability distribution (i.e., sums up to 1).
+        A neutral and valid choice would be the uniform distribution.
+        In case of a reversible transition matrix, 
+        use the stationary probability distribution ``pi`` here.
 
     m : int
         Number of clusters (macrostates) to group the n microstates into.
@@ -725,14 +729,13 @@ class GPCCA(object):
         Transition matrix (row-stochastic).
 
     input_distribution : ndarray (n,)
-        Input distribution of the (micro)states.
-        In case of a reversible transition matrix, use the stationary distribution ``pi`` here.
-
+        Input probability distribution of the (micro)states.
+        
     n_metastable : int
         Number of clusters (macrostates) to group the n microstates into.
     
     stationary_probability : ndarray (n,)
-        The stationary distribution of (micro)states given as vector of stationary probabilities.
+        The stationary probability distribution of the (micro)states.
 
     memberships : ndarray (n,m)
         A matrix containing the membership (or probability) of each state (to be assigned) 
