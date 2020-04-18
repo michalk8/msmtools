@@ -735,12 +735,12 @@ class GPCCA(object):
         # G-PCCA memberships
         self._rot_matrix, self._M, self._crispness = gpcca(self.P, self.eta, self.m)
 
-        ## stationary distribution
-        #from msmtools.analysis import stationary_distribution as _pi
-        #self._pi = _pi(self.P)
+        # stationary distribution
+        from msmtools.analysis import stationary_distribution as _stationary_distribution
+        self._pi = _stationary_distribution(self.P)
 
-        ## coarse-grained stationary distribution
-        #self._pi_coarse = np.dot(self._M.T, self._pi)
+        # coarse-grained stationary distribution
+        self._pi_coarse = np.dot(self._M.T, self._pi)
                          
         ## coarse-grained input (initial) distribution of states
         self.eta_coarse = np.dot(self._M.T, self.eta)
@@ -754,9 +754,9 @@ class GPCCA(object):
     def transition_matrix(self):
         return self.P
 
-    #@property
-    #def stationary_probability(self):
-        #return self._pi
+    @property
+    def stationary_probability(self):
+        return self._pi
                          
     @property
     def input_distribution(self):
@@ -782,9 +782,9 @@ class GPCCA(object):
     def coarse_grained_transition_matrix(self):
         return self._P_coarse
 
-    #@property
-    #def coarse_grained_stationary_probability(self):
-        #return self._pi_coarse
+    @property
+    def coarse_grained_stationary_probability(self):
+        return self._pi_coarse
                          
     @property
     def coarse_grained_input_distribution(self):
