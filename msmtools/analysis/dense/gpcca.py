@@ -518,7 +518,7 @@ def _fill_matrix(rot_matrix, X):
     return rot_matrix
 
 
-def gpcca(P, eta, m):
+def gpcca(P, eta, m, full_output=False):
     r"""
     G-PCCA [1]_ spectral clustering method with optimized memberships.
 
@@ -537,20 +537,33 @@ def gpcca(P, eta, m):
 
     m : int
         Number of clusters to group into.
+        
+    full_output : boolean, (default=False)
+        If False, only the membership matrix chi will be returned.
+        If True, all possible results (`chi`, `rot_matrix`, `X`, `R`, `crispness`) will be returned.
 
     Returns
     -------
-    rot_mat : ndarray (m,m)
-        Optimized rotation matrix that rotates the dominant Schur vectors to yield the G-PCCA memberships, 
-        i.e., ``chi = X * rot_mat``.
-        
     chi : ndarray (n,m)
         A matrix containing the membership (or probability) of each state (to be assigned) 
         to each cluster. The rows sum up to 1.
         
+    rot_matrix : ndarray (m,m)
+        Optimized rotation matrix that rotates the dominant Schur vectors to yield the G-PCCA memberships, 
+        i.e., ``chi = X * rot_matrix``.
+        
+    X : ndarray (n,m)
+        Matrix with ``m`` sorted Schur vectors in the columns.
+        The constant Schur vector is in the first column.
+        
+    R : ndarray (m,m)
+        Sorted real (partial) Schur matrix `R` of `P` such that
+        :math:`\tilde{P} Q = Q R` with the sorted (partial) matrix 
+        of Schur vectors :math:`Q` holds.
+        
     crispness : float (double)
         The crispness :math:`\xi \in [0,1]` quantifies the optimality of the solution (higher is better). 
-        It characterizes how crisp (sharp) the decomposition of the state space into m clusters is.
+        It characterizes how crisp (sharp) the decomposition of the state space into `m` clusters is.
         It is given via (Eq. 17 from [2]_):
         
         ..math: \xi = (m - f_{opt}) / m = \mathtt{trace}(S) / m = \mathtt{trace}(\tilde{D} \chi^T D \chi) / m -> \mathtt{max}
@@ -613,7 +626,7 @@ def gpcca(P, eta, m):
                          + str(n_closed_components) + " disconnected components")
     #-----------------
     
-    X, _ = _do_schur(P, eta, m) #TODO: Enable loading of sorted Schur vectors from file!
+    X, R = _do_schur(P, eta, m) #TODO: Enable loading of sorted Schur vectors from file!
 
     rot_matrix = _initialize_rot_matrix(X)
     
@@ -628,7 +641,7 @@ def gpcca(P, eta, m):
         raise ValueError(str(m) + " macrostates requested, but transition matrix only has " + str(nmeta)
                          + " macrostates. Request less macrostates.")
 
-    return (rot_matrix, chi, crispness)
+    return (chi, rot_matrix, X, R, crispness)
 
 
 def coarsegrain(P, eta, m):
@@ -678,7 +691,7 @@ def coarsegrain(P, eta, m):
     
     """                  
     #Matlab: Pc = pinv(chi'*diag(eta)*chi)*(chi'*diag(eta)*P*chi)
-    _, chi, _ = gpcca(P, eta, m)
+    chi = gpcca(P, eta, m)
     W = np.linalg.pinv(np.dot(chi.T, np.diag(eta)).dot(chi))
     A = np.dot(chi.T, np.diag(eta)).dot(P).dot(chi)
     P_coarse = W.dot(A)
@@ -733,7 +746,8 @@ class GPCCA(object):
         # G-PCCA coarse-graining
         # --------------------
         # G-PCCA memberships
-        self._rot_matrix, self._M, self._crispness = gpcca(self.P, self.eta, self.m)
+        self._M, self._rot_matrix, self._X, self._R, self._crispness = gpcca(self.P, self.eta, self.m, 
+                                                                             full_output=True)
 
         # stationary distribution
         from msmtools.analysis import stationary_distribution as _stationary_distribution
@@ -753,10 +767,6 @@ class GPCCA(object):
     @property
     def transition_matrix(self):
         return self.P
-
-    @property
-    def stationary_probability(self):
-        return self._pi
                          
     @property
     def input_distribution(self):
@@ -765,6 +775,10 @@ class GPCCA(object):
     @property
     def n_metastable(self):
         return self.m
+    
+    @property
+    def stationary_probability(self):
+        return self._pi
 
     @property
     def memberships(self):
@@ -773,6 +787,14 @@ class GPCCA(object):
     @property
     def rotation_matrix(self):
         return self._rot_matrix
+    
+    @property
+    def schur_vectors(self):
+        return self._X
+    
+    @property
+    def schur_matrix(self):
+        return self._R
     
     @property
     def cluster_crispness(self):
