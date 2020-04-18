@@ -565,15 +565,38 @@ def _cluster_by_isa(X):
     return (chi, minChi)
 
 
-def _use_minChi(X, m_min, m_max):
+def _use_minChi(P, eta, m_min, m_max):
     """
     Parameters
     ----------
-    X : ndarray (n,m)
-        A matrix with ``m`` sorted Schur vectors in the columns. The constant Schur vector should be first.
+    P : ndarray (n,n)
+        Transition matrix (row-stochastic).
+        
+    eta : ndarray (n,) 
+        Input probability distribution of the (micro)states.
+        In theory this can be an arbitray distribution as long as it is 
+        a valid probability distribution (i.e., sums up to 1).
+        A neutral and valid choice would be the uniform distribution.
+        In case of a reversible transition matrix, 
+        use the stationary probability distribution ``pi`` here.
 
+    m_min : int
+        Minimal number of clusters to group into.
+        
+    m_max : int
+        Maximal number of clusters to group into.
+        
     Returns
     -------
+    X : ndarray (n,m)
+        Matrix with ``m`` sorted Schur vectors in the columns.
+        The constant Schur vector is in the first column.
+        
+    R : ndarray (m,m)
+        Sorted real (partial) Schur matrix `R` of `P` such that
+        :math:`\tilde{P} Q = Q R` with the sorted (partial) matrix 
+        of Schur vectors :math:`Q` holds.
+        
      minChi_list : list of ``m_max - m_min`` floats (double)
         List of minChi indicators for cluster numbers :math:`m \in [m_{min},m_{max}], see [1]_ and [2]_.
         
@@ -583,13 +606,13 @@ def _use_minChi(X, m_min, m_max):
            application to Markov state models and data classification.
            Adv Data Anal Classif 7, 147-179 (2013).
            https://doi.org/10.1007/s11634-013-0134-6
-
     .. [2] Reuter, B., Weber, M., Fackeldey, K., Röblitz, S., & Garcia, M. E. (2018). Generalized
            Markov State Modeling Method for Nonequilibrium Biomolecular Dynamics: Exemplified on
            Amyloid β Conformational Dynamics Driven by an Oscillating Electric Field. Journal of
            Chemical Theory and Computation, 14(7), 3579–3594. https://doi.org/10.1021/acs.jctc.8b00079
         
     """
+    X, R = _do_schur(P, eta, m_max)
     
     minChi_list = []
     for m in range(m_min, m_max + 1):
