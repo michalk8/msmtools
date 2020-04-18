@@ -403,9 +403,6 @@ def _indexsearch(X):
                 max_dist = distt
                 index[j] = i
         ortho_sys /= max_dist
-        # Attention: In the _pcca_connected_isa() function in pcca.py of MSMTools
-        # they use a slightly different form:
-        # ortho_sys /= np.linalg.norm(ortho_sys[index[j]], 2)
 
     return index
 
