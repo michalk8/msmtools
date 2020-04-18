@@ -704,8 +704,8 @@ def gpcca(P, eta, m, full_output=False):
 
     # Check, if we have enough clusters to support the disconnected sets.
     if (m < n_closed_components):
-        raise ValueError("Number of metastable states m = " + str(m) + " is too small. Transition matrix has "
-                         + str(n_closed_components) + " disconnected components")
+        warnings.warn("Number of metastable states m = " + str(m) + " is too small. Transition matrix has "
+                      + str(n_closed_components) + " disconnected components")
     #-----------------
     
     X, R = _do_schur(P, eta, m) #TODO: Enable loading of sorted Schur vectors from file!
