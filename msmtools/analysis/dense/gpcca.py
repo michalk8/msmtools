@@ -387,7 +387,7 @@ def _indexsearch(X):
             index[0] = i
 
     # Translate coordinates to make the first vertex the origin.
-    ortho_sys -= np.ones((n, 1)).dot(X[index[0], np.newaxis]) 
+    ortho_sys -= np.ones((n, 1)).dot(ortho_sys[index[0], np.newaxis]) 
     # Would be shorter, but less readable: ortho_sys -= X[index[0], np.newaxis]
 
     # All further vertices as rows with maximum distance to existing subspace.
