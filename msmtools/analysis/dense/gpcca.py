@@ -650,8 +650,8 @@ def use_minChi(P, eta, m_min, m_max, X=None, R=None):
     
     minChi_list = []
     for m in range(m_min, m_max + 1):
-        Xm = np.copy(X[:, :m])
-        _, minChi = cluster_by_isa(Xm)
+        #Xm = np.copy(X[:, :m])
+        _, minChi = cluster_by_isa(X[:, :m])
         minChi_list.append(minChi)
         
     return (X, R, minChi_list)
@@ -898,9 +898,9 @@ def gpcca(P, eta, m, X=None, R=None, full_output=False):
                           + "complex conjugate eigenvalues in the Schur form. The result will "
                           + "be of questionable meaning. "
                           + "Please increase/decrease number of states by one.")
-        # Reduce X according to m and make a work copy.
-        Xm = np.copy(self.X[:, :m])
-        chi, rot_matrix, crispness = _gpcca_core(Xm)
+        ## Reduce X according to m and make a work copy.
+        #Xm = np.copy(X[:, :m])
+        chi, rot_matrix, crispness = _gpcca_core(X[:, :m])
         # check if we have at least m dominant sets. If less than m, we warn.
         nmeta = np.count_nonzero(chi.sum(axis=0))
         if (m > nmeta):
