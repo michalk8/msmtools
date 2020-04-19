@@ -918,7 +918,7 @@ def gpcca(P, eta, m, X=None, R=None, full_output=False):
         rot_matrix_list.append(rot_matrix)
         
     opt_idx = np.argmax(crispness_list)
-    m_opt = m_min + opt_idx
+    m_opt = min(m_list) + opt_idx
     chi = chi_list[opt_idx]
     rot_matrix = rot_matrix_list[opt_idx]
     crispness = crispness_list[opt_idx]
