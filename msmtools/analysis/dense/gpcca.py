@@ -1206,7 +1206,7 @@ class GPCCA(object):
 
     @property
     def n_metastable(self):
-        return self.m_opt
+        return self._m_opt
     
     @property
     def stationary_probability(self):
@@ -1272,6 +1272,6 @@ class GPCCA(object):
         """
         m_sets = []
         assignment = self.metastable_assignment
-        for i in range(self.m_opt):
+        for i in range(self._m_opt):
             m_sets.append(np.where(assignment == i)[0])
         return m_sets
