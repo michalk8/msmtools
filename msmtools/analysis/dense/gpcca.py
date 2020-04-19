@@ -651,7 +651,7 @@ def use_minChi(P, eta, m_min, m_max, X=None, R=None):
     minChi_list = []
     for m in range(m_min, m_max + 1):
         #Xm = np.copy(X[:, :m])
-        _, minChi = cluster_by_isa(X[:, :m])
+        _, minChi = _cluster_by_isa(X[:, :m])
         minChi_list.append(minChi)
         
     return (X, R, minChi_list)
