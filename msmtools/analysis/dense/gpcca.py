@@ -1074,11 +1074,11 @@ class GPCCA(object):
             
         opt_idx = np.argmax(crispness_list)
         m_opt = m_min + opt_idx
-        self._chi
-        self._rot_matrix
-        self._X
-        self._R
-        self._crispness
+        self._chi = chi_list[opt_idx]
+        self._rot_matrix = rot_matrix_list[opt_idx]
+        self._X = X[:, :m_opt]
+        self._R = R[:m_opt, :m_opt]
+        self._crispness = crispness_list[opt_idx]
 
         # stationary distribution
         from msmtools.analysis import stationary_distribution as _stationary_distribution
