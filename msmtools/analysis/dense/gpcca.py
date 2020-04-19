@@ -565,7 +565,7 @@ def _cluster_by_isa(X):
     return (chi, minChi)
 
 
-def use_minChi(P, eta, m_min, m_max):
+def use_minChi(P, eta, m_min, m_max, X=None, R=None):
     """
     Parameters
     ----------
@@ -612,7 +612,25 @@ def use_minChi(P, eta, m_min, m_max):
            Chemical Theory and Computation, 14(7), 3579–3594. https://doi.org/10.1021/acs.jctc.8b00079
         
     """
-    X, R = _do_schur(P, eta, m_max)
+    n = np.shape(P)[0]
+    if (n != np.shape(P)[1]):
+        raise ValueError("P is not quadratic!")
+        
+    if ( (X is not None) and (R is not None) ):
+        Xdim1, Xdim2 = X.shape
+        Rdim1, Rdim2 = R.shape
+        if not (Xdim1 == n):
+            raise ValueError("The first dimension of X is " + str(Xdim1) + ". This doesn't match "
+                             + "with the dimension of P (" + str(n) + "," + str(n) + ")!")
+        if not (Rdim1 == Rdim2):
+            raise ValueError("The Schur form R is not quadratic!")
+        if not (Xdim2 == Rdim1):
+            raise ValueError("The second dimension of X is " + str(Xdim2) + ". This doesn't match "
+                                 + "with the dimensions of R (" + str(Rdim1) + "," + str(Rdim2) + ")!")
+        if not (Rdim2 >= m_max):
+            X, R = _do_schur(P, eta, m_max)
+    else:
+        X, R = _do_schur(P, eta, m_max))
     
     minChi_list = []
     for m in range(m_min, m_max + 1):
@@ -687,7 +705,7 @@ def _gpcca_core(X):
     return (chi, rot_matrix, crispness)
 
 
-def gpcca(P, eta, m, full_output=False):
+def gpcca(P, eta, m, X=None, R=None, full_output=False):
     r"""
     Full G-PCCA [1]_ spectral clustering method with optimized memberships and the option
     to optimize the number of clusters (macrostates) `m` as well.
@@ -803,6 +821,8 @@ def gpcca(P, eta, m, full_output=False):
 
     # validate input
     n = np.shape(P)[0]
+    if (n != np.shape(P)[1]):
+        raise ValueError("P is not quadratic!")
     if (max(m_list) > n):
         raise ValueError("Number of macrostates m = " + str(max(m_list))+
                          " exceeds number of states of the transition matrix n = " + str(n) + ".")
@@ -823,8 +843,22 @@ def gpcca(P, eta, m, full_output=False):
             closed_components.append(component)
     n_closed_components = len(closed_components)
     
-    # Calculate Schur matrix R and Schur vector matrix X.
-    X, R = _do_schur(P, eta, max(m_list))
+    # Calculate Schur matrix R and Schur vector matrix X, if not adequately given.
+    if ( (X is not None) and (R is not None) ):
+        Xdim1, Xdim2 = X.shape
+        Rdim1, Rdim2 = R.shape
+        if not (Xdim1 == n):
+            raise ValueError("The first dimension of X is " + str(Xdim1) + ". This doesn't match "
+                             + "with the dimension of P (" + str(n) + "," + str(n) + ")!")
+        if not (Rdim1 == Rdim2):
+            raise ValueError("The Schur form R is not quadratic!")
+        if not (Xdim2 == Rdim1):
+            raise ValueError("The second dimension of X is " + str(Xdim2) + ". This doesn't match "
+                                 + "with the dimensions of R (" + str(Rdim1) + "," + str(Rdim2) + ")!")
+        if not (Rdim2 >= max(m_list)):
+            X, R = _do_schur(P, eta, max(m_list))
+    else:
+        X, R = _do_schur(P, eta, max(m_list))
             
     # Initialize lists to collect results.
     chi_list = []
@@ -1045,14 +1079,35 @@ class GPCCA(object):
         if m_sort in [0,1]:
             raise ValueError("There is no point in clustering into", str(m), "clusters!")
         self.m_sort = m_sort
-        self.X, self.R = _do_schur(P, eta, m_sort)
+        self.X = None
+        self.R = None
+        
+    def minChi(self, m_min, m_max):
+        
+        if ( (self.X is not None) and (self.R is not None) ):
+            Rdim1, Rdim2 = self.R.shape
+            if (Rdim1 == Rdim2 >= m_max):
+                _, _, minChi_list = use_minChi(self, m_min, m_max, X=self.X, R=self.R)
+            else:
+                self.X, self.R, minChi_list = use_minChi(self, m_min, m_max)
+        else:
+            self.X, self.R, minChi_list = use_minChi(self, m_min, m_max)
+            
+        return (self, minChi_list)
         
     # G-PCCA coarse-graining   
     # G-PCCA memberships
         #self._M, self._rot_matrix, self._X, self._R, self._crispness = gpcca(self.P, self.eta, self.m, full_output=True)
     def optimize(self, m):
         
-        self._chi, self._rot_matrix, self._crispness, self.X, self.R = gpcca(self.P, self.eta, m)
+        if ( (self.X is not None) and (self.R is not None) ):
+            Rdim1, Rdim2 = self.R.shape
+            if (Rdim1 == Rdim2 >= m_max):
+                self._chi, self._rot_matrix, self._crispness, _, _ = gpcca(self.P, self.eta, m, X=self.X, R=self.R)
+            else:
+                self._chi, self._rot_matrix, self._crispness, self.X, self.R = gpcca(self.P, self.eta, m)
+        else:
+            self._chi, self._rot_matrix, self._crispness, self.X, self.R = gpcca(self.P, self.eta, m)
             
         self._m_opt = np.shape(self._rot_matrix)[0]
         self._X = X[:, :self._m_opt]
