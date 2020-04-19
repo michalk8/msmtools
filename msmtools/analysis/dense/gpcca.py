@@ -748,7 +748,7 @@ def gpcca(P, eta, m, full_output=False):
     return (chi, rot_matrix, X, R, crispness)
 
 
-def coarsegrain(P, eta, m):
+def gpcca_coarsegrain(P, eta, m):
     r"""
     Coarse-grains the transition matrix `P` to `m` sets using G-PCCA.
     Coarse-grains `P` such that the (dominant) Perron eigenvalues are preserved, using [1]_:
@@ -795,7 +795,7 @@ def coarsegrain(P, eta, m):
     
     """                  
     #Matlab: Pc = pinv(chi'*diag(eta)*chi)*(chi'*diag(eta)*P*chi)
-    chi = gpcca(P, eta, m)
+    chi, _, _, _, _ = gpcca(P, eta, m)
     W = np.linalg.pinv(np.dot(chi.T, np.diag(eta)).dot(chi))
     A = np.dot(chi.T, np.diag(eta)).dot(P).dot(chi)
     P_coarse = W.dot(A)
