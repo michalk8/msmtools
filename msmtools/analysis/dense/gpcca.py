@@ -518,7 +518,7 @@ def _fill_matrix(rot_matrix, X):
 
 
 def _cluster_by_isa(X):
-    """
+    r"""
     Classification of dynamical data based on ``m`` orthonormal Schur vectors 
     of the (row-stochastic) transition matrix. Hereby ``m`` determines the number 
     of clusters to cluster the data into. The applied method is the Inner Simplex Algorithm (ISA).
@@ -992,8 +992,8 @@ class GPCCA(object):
         ATTENTION: Should be equal to the maximal number of clusters used
         during cluster number optimization (via the methods `use_minChi` and/or `optimize`).
         
-    Properties:
-    -----------
+    Properties
+    ----------
     
     transition_matrix : ndarray (n,n)
         Transition matrix (row-stochastic).
@@ -1061,8 +1061,45 @@ class GPCCA(object):
         You *cannot* compute any actual quantity of the coarse-grained kinetics 
         without employing the fuzzy memberships!
         
-    References:
-    -----------
+    Methods
+    -------
+    __init__(self, P, eta)
+        Initialize self.
+        
+    minChi(self, m_min, m_max)
+        Calculate the minChi indicator (see [1]_) for every 
+        :math:`m \in [m_{min},m_{max}]`. The minChi indicator can be
+        used to determine an interval :math:`I \subset [m_{min},m_{max}]` 
+        of good (potentially optimal) numbers of clusters. 
+        Afterwards either one :math:`m \in I`(with maximal `minChi`) or 
+        the whole interval :math:`I` is choosen as input for `optimize` 
+        (for further optimization).
+        Parameters
+        ----------
+        m_min : int
+            Minimum number of clusters to calculate minChi for.
+        m_max : int
+            Maximum number of clusters to calculate minChi for.
+        Returns
+        -------
+        minChi_list : list of floats (double)
+            List of resulting values of the `minChi` indicator for
+            every :math:`m \in [m_{min},m_{max}]`.
+    
+    optimize(self, m)
+        Perform the actual optimized spectral clustering with G-PCCA
+        either for a single number of clusters `m`
+        or for cluster numbers :math:`m \in [m_{min},m_{max}]`,
+        thus also optimzing `m`.
+        Parameters
+        ----------
+        m : int or dict
+            If int: number of clusters to group into.
+            If dict: minmal and maximal number of clusters `m_min` and 
+            `m_max` given as a dict `{'m_min': int, 'm_max': int}`.
+        
+    References
+    ----------
     .. [1] Reuter, B., Weber, M., Fackeldey, K., Röblitz, S., & Garcia, M. E. (2018). Generalized
            Markov State Modeling Method for Nonequilibrium Biomolecular Dynamics: Exemplified on
            Amyloid β Conformational Dynamics Driven by an Oscillating Electric Field. Journal of
