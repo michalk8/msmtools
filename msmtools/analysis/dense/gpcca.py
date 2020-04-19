@@ -1142,11 +1142,11 @@ class GPCCA(object):
         if ( (self.X is not None) and (self.R is not None) ):
             Rdim1, Rdim2 = self.R.shape
             if (Rdim1 == Rdim2 >= m_max):
-                _, _, minChi_list = use_minChi(self.P, m_min, m_max, X=self.X, R=self.R)
+                _, _, minChi_list = use_minChi(self.P, self.eta, m_min, m_max, X=self.X, R=self.R)
             else:
-                self.X, self.R, minChi_list = use_minChi(self.P, m_min, m_max)
+                self.X, self.R, minChi_list = use_minChi(self.P, self.eta, m_min, m_max)
         else:
-            self.X, self.R, minChi_list = use_minChi(self.P, m_min, m_max)
+            self.X, self.R, minChi_list = use_minChi(self.P, self.eta, m_min, m_max)
             
         return (self, minChi_list)
         
