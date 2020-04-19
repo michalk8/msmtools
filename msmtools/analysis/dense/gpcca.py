@@ -1174,8 +1174,8 @@ class GPCCA(object):
             self._chi, self._rot_matrix, self._crispness, self.X, self.R = gpcca(self.P, self.eta, m)
             
         self._m_opt = np.shape(self._rot_matrix)[0]
-        self._X = X[:, :self._m_opt]
-        self._R = R[:self._m_opt, :self._m_opt]
+        self._X = self.X[:, :self._m_opt]
+        self._R = self.R[:self._m_opt, :self._m_opt]
 
         # stationary distribution
         from msmtools.analysis import stationary_distribution as _stationary_distribution
