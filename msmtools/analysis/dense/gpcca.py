@@ -836,13 +836,13 @@ def gpcca(P, eta, m, X=None, R=None, full_output=False):
     
     # extract m_min, m_max, if given, else take single m
     if isinstance(m, dict):
-            m_min = m.get('m_min', None)
-            m_max = m.get('m_max', None)
-            if not (m_min < m_max):
-                raise ValueError("m_min must be smaller than m_max!")
-            m_list = [m_min, m_max]
-        elif isinstance(m, int):
-            m_list = [m]
+        m_min = m.get('m_min', None)
+        m_max = m.get('m_max', None)
+        if not (m_min < m_max):
+            raise ValueError("m_min must be smaller than m_max!")
+        m_list = [m_min, m_max]
+    elif isinstance(m, int):
+        m_list = [m]
             
     # validate input
     n = np.shape(P)[0]
