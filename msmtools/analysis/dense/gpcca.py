@@ -675,7 +675,8 @@ def _gpcca_core(X):
     ----------------------------------------------
     
     """
-
+    m = np.shape(X)[1]
+    
     rot_matrix = _initialize_rot_matrix(X)
     
     rot_matrix, chi, fopt = _opt_soft(X, rot_matrix)
