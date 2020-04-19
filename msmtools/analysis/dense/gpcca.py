@@ -938,17 +938,67 @@ def gpcca(P, eta, m, X=None, R=None, full_output=False):
         return (chi, rot_matrix, crispness, X, R, chi_list, rot_matrix_list, crispness_list)
     else:
         return (chi, rot_matrix, crispness, X, R)
+    
+    
+def coarsegrain(P, eta, chi):
+    r"""
+    Coarse-grains `P` such that the (dominant) Perron eigenvalues are preserved, using:
+
+    ..math:
+        P_c = (\chi^T D \chi)^{-1} (\chi^T D P \chi)
+        
+    with :math:`D` being a diagonal matrix with `eta` on its diagonal [1]_.
+        
+    Parameters
+    ----------
+    P : ndarray (n,n)
+        Transition matrix (row-stochastic).
+        
+    eta : ndarray (n,) 
+        Input (initial) distribution of states.
+        In case of a reversible transition matrix, use the stationary distribution ``pi`` here.
+
+    chi : ndarray (n,m)
+        A matrix containing the membership (or probability) of each state (to be assigned) 
+        to each cluster. The rows sum up to 1.
+
+    Returns
+    -------
+    P_coarse : ndarray (m,m)
+        The coarse-grained transition matrix (row-stochastic).
+
+    References
+    ----------
+    .. [1] Reuter, B., Weber, M., Fackeldey, K., Röblitz, S., & Garcia, M. E. (2018). Generalized
+           Markov State Modeling Method for Nonequilibrium Biomolecular Dynamics: Exemplified on
+           Amyloid β Conformational Dynamics Driven by an Oscillating Electric Field. Journal of
+           Chemical Theory and Computation, 14(7), 3579–3594. https://doi.org/10.1021/acs.jctc.8b00079
+        
+    Copyright (c) 2020 Bernhard Reuter, Susanna Roeblitz and Marcus Weber, 
+    Zuse Institute Berlin, Takustrasse 7, 14195 Berlin
+    ----------------------------------------------
+    If you use this code or parts of it, cite [1]_.
+    ----------------------------------------------
+    
+    """                  
+    #Matlab: Pc = pinv(chi'*diag(eta)*chi)*(chi'*diag(eta)*P*chi)
+    W = np.linalg.pinv(np.dot(chi.T, np.diag(eta)).dot(chi))
+    A = np.dot(chi.T, np.diag(eta)).dot(P).dot(chi)
+    P_coarse = W.dot(A)
+                       
+    return P_coarse
 
 
 def gpcca_coarsegrain(P, eta, m):
     r"""
     Coarse-grains the transition matrix `P` to `m` sets using G-PCCA.
-    Coarse-grains `P` such that the (dominant) Perron eigenvalues are preserved, using [1]_:
+    Performs optimized spectral clustering via G-PCCA and coarse-grains
+    `P` such that the (dominant) Perron eigenvalues are preserved, using:
 
     ..math:
         P_c = (\chi^T D \chi)^{-1} (\chi^T D P \chi)
         
-    with :math:`D` being a diagonal matrix with `eta` on its diagonal.
+    with :math:`D` being a diagonal matrix with `eta` on its diagonal [1]_.
         
     Parameters
     ----------
@@ -973,11 +1023,6 @@ def gpcca_coarsegrain(P, eta, m):
            Markov State Modeling Method for Nonequilibrium Biomolecular Dynamics: Exemplified on
            Amyloid β Conformational Dynamics Driven by an Oscillating Electric Field. Journal of
            Chemical Theory and Computation, 14(7), 3579–3594. https://doi.org/10.1021/acs.jctc.8b00079
-
-    .. [2] S. Roeblitz and M. Weber, Fuzzy spectral clustering by PCCA+:
-           application to Markov state models and data classification.
-           Adv Data Anal Classif 7, 147-179 (2013).
-           https://doi.org/10.1007/s11634-013-0134-6
         
     Copyright (c) 2020 Bernhard Reuter, Susanna Roeblitz and Marcus Weber, 
     Zuse Institute Berlin, Takustrasse 7, 14195 Berlin
