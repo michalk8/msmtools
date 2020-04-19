@@ -566,7 +566,7 @@ def _cluster_by_isa(X):
 
 
 def use_minChi(P, eta, m_min, m_max, X=None, R=None):
-    """
+    r"""
     Parameters
     ----------
     P : ndarray (n,n)
@@ -585,6 +585,15 @@ def use_minChi(P, eta, m_min, m_max, X=None, R=None):
         
     m_max : int
         Maximal number of clusters to group into.
+        
+    X : ndarray (n,m), (default=None)
+        Matrix with :math:`m \geq m_{max}` sorted Schur vectors in the columns.
+        The constant Schur vector is in the first column.
+        
+    R : ndarray (m,m), (default=None)
+        Sorted real (partial) Schur matrix `R` of `P` such that
+        :math:`\tilde{P} Q = Q R` with the sorted (partial) matrix 
+        of Schur vectors :math:`Q` holds and :math:`m \geq m_{max}`.
         
     Returns
     -------
@@ -742,6 +751,15 @@ def gpcca(P, eta, m, X=None, R=None, full_output=False):
         If int: number of clusters to group into.
         If dict: minmal and maximal number of clusters `m_min` and `m_max` given as
         a dict `{'m_min': int, 'm_max': int}`.
+        
+    X : ndarray (n,m), (default=None)
+        Matrix with :math:`m \geq m_{max}` sorted Schur vectors in the columns.
+        The constant Schur vector is in the first column.
+        
+    R : ndarray (m,m), (default=None)
+        Sorted real (partial) Schur matrix `R` of `P` such that
+        :math:`\tilde{P} Q = Q R` with the sorted (partial) matrix 
+        of Schur vectors :math:`Q` holds and :math:`m \geq m_{max}`.
         
     full_output : boolean, (default=False)
         If False, only the optimal results `chi`, `rot_matrix`, `crispness` and the
