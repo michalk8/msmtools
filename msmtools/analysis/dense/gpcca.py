@@ -324,11 +324,11 @@ def _initialize_rot_matrix(X):
     # Search start simplex vertices ('inner simplex algorithm').
     index = _indexsearch(X)
     
-    # Local copy of the Schur vectors.
-    Xc = np.copy(X)
+    ## Local copy of the Schur vectors.
+    #Xc = np.copy(X)
     
     # Raise or warn if condition number is (too) high.
-    condition = np.linalg.cond(Xc[index, :])
+    condition = np.linalg.cond(X[index, :])
     if not (condition < (1.0 / eps)):
         raise ValueError("The condition number " + str(condition) + " of the matrix of start simplex vertices " 
                          + "X[index, :] is too high for save inversion (to build the initial rotation matrix)!")
@@ -337,7 +337,7 @@ def _initialize_rot_matrix(X):
                       + "X[index, :] is quite high for save inversion (to build the initial rotation matrix)!")
         
     # Compute transformation matrix rot_matrix as initial guess for local optimization (maybe not feasible!).
-    rot_matrix = np.linalg.pinv(Xc[index, :])
+    rot_matrix = np.linalg.pinv(X[index, :])
   
     return rot_matrix
  
