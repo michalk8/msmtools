@@ -986,11 +986,6 @@ class GPCCA(object):
         A neutral and valid choice would be the uniform distribution.
         In case of a reversible transition matrix, 
         use the stationary probability distribution ``pi`` here.
-
-    m_sort : int
-        Number of dominant Schur vectors to sort.
-        ATTENTION: Should be equal to the maximal number of clusters used
-        during cluster number optimization (via the methods `use_minChi` and/or `optimize`).
         
     Properties
     ----------
