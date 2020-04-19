@@ -865,9 +865,9 @@ def gpcca(P, eta, m, full_output=False):
     crispness = crispness_list[opt_idx]
     
     if full_output:
-        return (chi, rot_matrix, crispness X, R, chi_list, rot_matrix_list, crispness_list)
+        return (chi, rot_matrix, crispness, X, R, chi_list, rot_matrix_list, crispness_list)
     else:
-        return (chi, rot_matrix, crispness X, R)
+        return (chi, rot_matrix, crispness, X, R)
 
 
 def coarsegrain(P, eta, m):
@@ -1052,45 +1052,11 @@ class GPCCA(object):
         #self._M, self._rot_matrix, self._X, self._R, self._crispness = gpcca(self.P, self.eta, self.m, full_output=True)
     def optimize(self, m):
         
-        if isinstance(m, dict):
-            m_min = m.get('m_min', None)
-            m_max = m.get('m_max', None)
-            if not (m_min < m_max):
-                raise ValueError("m_min !< m_max")
-            m_list = [m_min, m_max]
-        elif isinstance(m, int):
-            self.m = m
-            m_list = [m]
-        
-        if max(m_list) < m_sort:
-            X, R = _do_schur(P, eta, max(m_list))
-        else:
-            X = self.X
-            R = self.R
+        self._chi, self._rot_matrix, self._crispness, self.X, self.R = gpcca(self.P, self.eta, m)
             
-        chi_list = []
-        rot_matrix_list = []
-        crispness_list = []
-        for m in range(min(m_list), max(m_list) + 1):
-            Rm = R[:m, :m]
-            if m - 1 not in _find_twoblocks(Rm):
-                warnings.warn("Coarse-graining with " + str(m) + " states cuts through a block of "
-                              + "complex conjugate eigenvalues in the Schur form. The result will "
-                              + "be of questionable meaning. "
-                              + "Please increase/decrease number of states by one.")
-            Xm = np.copy(self.X[:, :m])
-            chi, rot_matrix, crispness = _gpcca_core(self.P, Xm)
-            chi_list.append(chi)
-            rot_matrix_list.append(rot_matrix)
-            crispness_list.append(crispness)
-            
-        opt_idx = np.argmax(crispness_list)
-        m_opt = m_min + opt_idx
-        self._chi = chi_list[opt_idx]
-        self._rot_matrix = rot_matrix_list[opt_idx]
-        self._X = X[:, :m_opt]
-        self._R = R[:m_opt, :m_opt]
-        self._crispness = crispness_list[opt_idx]
+        self._m_opt = np.shape(self._rot_matrix)[0]
+        self._X = X[:, :self._m_opt]
+        self._R = R[:self._m_opt, :self._m_opt]
 
         # stationary distribution
         from msmtools.analysis import stationary_distribution as _stationary_distribution
