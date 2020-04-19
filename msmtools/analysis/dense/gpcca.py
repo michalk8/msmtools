@@ -612,9 +612,16 @@ def use_minChi(P, eta, m_min, m_max, X=None, R=None):
            Chemical Theory and Computation, 14(7), 3579–3594. https://doi.org/10.1021/acs.jctc.8b00079
         
     """
+    from msmtools.analysis import is_transition_matrix
+    
+    # Validate Input.
     n = np.shape(P)[0]
-    if (n != np.shape(P)[1]):
-        raise ValueError("P is not quadratic!")
+    if not is_transition_matrix(P):
+        raise ValueError("Input matrix P is not a transition matrix.")
+    if not (m_min < m_max):
+        raise ValueError("m_min must be smaller than m_max!")
+    if m_min in [0,1]:
+        raise ValueError("There is no point in clustering into", str(m), "clusters!")
         
     if ( (X is not None) and (R is not None) ):
         Xdim1, Xdim2 = X.shape
@@ -818,16 +825,16 @@ def gpcca(P, eta, m, X=None, R=None, full_output=False):
             m_list = [m_min, m_max]
         elif isinstance(m, int):
             m_list = [m]
-
+            
     # validate input
     n = np.shape(P)[0]
-    if (n != np.shape(P)[1]):
-        raise ValueError("P is not quadratic!")
+    if not is_transition_matrix(P):
+        raise ValueError("Input matrix P is not a transition matrix.")
     if (max(m_list) > n):
         raise ValueError("Number of macrostates m = " + str(max(m_list))+
                          " exceeds number of states of the transition matrix n = " + str(n) + ".")
-    if not is_transition_matrix(P):
-        raise ValueError("Input matrix P is not a transition matrix.")
+    if min(m_list) in [0,1]:
+        raise ValueError("There is no point in clustering into", str(m), "clusters!")
     
     # test connectivity
     components = connected_sets(P)
@@ -1069,18 +1076,16 @@ class GPCCA(object):
 
     """
 
-    def __init__(self, P, eta, m_sort):
+    def __init__(self, P, eta):
         if issparse(P):
             warnings.warn("gpcca is only implemented for dense matrices, "
                           + "converting sparse transition matrix to dense ndarray.")
             P = P.toarray()
         self.P = P
         self.eta = eta
-        if m_sort in [0,1]:
-            raise ValueError("There is no point in clustering into", str(m), "clusters!")
-        self.m_sort = m_sort
         self.X = None
         self.R = None
+        
         
     def minChi(self, m_min, m_max):
         
@@ -1095,14 +1100,23 @@ class GPCCA(object):
             
         return (self, minChi_list)
         
+        
     # G-PCCA coarse-graining   
-    # G-PCCA memberships
-        #self._M, self._rot_matrix, self._X, self._R, self._crispness = gpcca(self.P, self.eta, self.m, full_output=True)
     def optimize(self, m):
+        
+        # extract m_min, m_max, if given, else take single m
+        if isinstance(m, dict):
+            m_min = m.get('m_min', None)
+            m_max = m.get('m_max', None)
+            if not (m_min < m_max):
+                raise ValueError("m_min must be smaller than m_max!")
+            m_list = [m_min, m_max]
+        elif isinstance(m, int):
+            m_list = [m]
         
         if ( (self.X is not None) and (self.R is not None) ):
             Rdim1, Rdim2 = self.R.shape
-            if (Rdim1 == Rdim2 >= m_max):
+            if (Rdim1 == Rdim2 >= max(m_list)):
                 self._chi, self._rot_matrix, self._crispness, _, _ = gpcca(self.P, self.eta, m, X=self.X, R=self.R)
             else:
                 self._chi, self._rot_matrix, self._crispness, self.X, self.R = gpcca(self.P, self.eta, m)
