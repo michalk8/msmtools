@@ -696,9 +696,6 @@ def gpcca(P, eta, m, full_output=False):
                          " exceeds number of states of the transition matrix n = " + str(n) + ".")
     if not is_transition_matrix(P):
         raise ValueError("Input matrix is not a transition matrix.")
-
-    # prepare output
-    chi = np.zeros((n, m))
     
     #---------------keep?
     # test connectivity
