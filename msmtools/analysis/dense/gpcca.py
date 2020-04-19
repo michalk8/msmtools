@@ -646,7 +646,7 @@ def use_minChi(P, eta, m_min, m_max, X=None, R=None):
         if not (Rdim2 >= m_max):
             X, R = _do_schur(P, eta, m_max)
     else:
-        X, R = _do_schur(P, eta, m_max))
+        X, R = _do_schur(P, eta, m_max)
     
     minChi_list = []
     for m in range(m_min, m_max + 1):
