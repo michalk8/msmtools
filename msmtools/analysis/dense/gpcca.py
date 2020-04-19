@@ -468,6 +468,17 @@ def _opt_soft(X, rot_matrix):
     
     # Compute the membership matrix.
     chi = np.dot(X, rot_matrix)
+    
+    # Check for negative elements in chi and handle them.
+    if np.any(chi < 0.0):
+        if np.any(chi < -10*eps):
+            raise ValueError("Some elements of chi are 'significantly' negative (<" + str(-10*eps) + ")")
+        else:
+            chi[chi < 0.0] = 0.0
+            chi = np.diag(np.true_divide(1.0, np.sum(chi, axis=1))).dot(chi)
+            if not np.allclose(np.sum(chi, axis=1), 1.0, rtol=eps, atol=eps):
+                raise ValueError("The rows of chi don't sum up to 1.0 after rescaling "
+                                 + "(with a absolute and relative tolerance of " + str(eps) + ").")
 
     return (rot_matrix, chi, fopt)
   
