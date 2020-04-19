@@ -980,7 +980,7 @@ def coarsegrain(P, eta, chi):
     If you use this code or parts of it, cite [1]_.
     ----------------------------------------------
     
-    """                  
+    """
     #Matlab: Pc = pinv(chi'*diag(eta)*chi)*(chi'*diag(eta)*P*chi)
     W = np.linalg.pinv(np.dot(chi.T, np.diag(eta)).dot(chi))
     A = np.dot(chi.T, np.diag(eta)).dot(P).dot(chi)
@@ -1246,9 +1246,7 @@ class GPCCA(object):
         self._eta_coarse = np.dot(self._chi.T, self.eta)
 
         # coarse-grain transition matrix 
-        W = np.linalg.pinv(np.dot(self._chi.T, np.diag(self.eta)).dot(self._chi))
-        A = np.dot(self._chi.T, np.diag(self.eta)).dot(self.P).dot(self._chi)
-        self._P_coarse = W.dot(A)
+        self._P_coarse = coarsegrain(self.P, self.eta, self._chi)
         
         return self
 
