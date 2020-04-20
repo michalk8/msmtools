@@ -74,6 +74,9 @@ def sorted_scipy_schur(P, m, z='LM'):
         'LR': the m eigenvalues with the largest real part are sorted up.
         
     """
+    # Calculate the top m+1 eigenvalues and secure that you
+    # don't separate conjugate eigenvalues (corresponding to 2x2-block in R),
+    # if you take the dominant m eigenvalues to cluster the data.
     top_eigenvals = top_eigenvalues(P, m, z=z)
     
     eigenval_in = top_eigenvals[m-1]
@@ -126,7 +129,12 @@ def sorted_krylov_schur(P, m, z='LM'):
     except ImportError as err:
         raise ImportError("Couldn't import SELPc and PETSc: Can't use Krylov-Schur method "
                           + "to construct a sorted partial Schur vector matrix." + err) 
-        
+    
+    #Calculate the top m+1 eigenvalues and secure that you
+    # don't separate conjugate eigenvalues (corresponding to 2x2-block in R),
+    # if you take the dominant m eigenvalues to cluster the data.
+    top_eigenvals = top_eigenvalues(P, m, z=z)
+    
     M = PETSc.Mat().create()
     M.createDense(list(np.shape(P)), array=P)
     # Creates EPS object.
@@ -199,26 +207,75 @@ def sorted_krylov_schur(P, m, z='LM'):
     top_eigenvalues = np.asarray(top_eigenvalues)
     top_eigenvalues_error = np.asarray(top_eigenvalues_error)
     
+    # Compare the eigenvalues returned by top_eigenvalues() with the one returned by SLEPc
+    if not np.allclose(top_eigenvalues, top_eigenvals[:m], rtol=1e-05, atol=1e-08):
+        warnings.warn("Caution: The top eigenvalues returned by SLEPc using the Krylov-Schur "
+                      + "method, diverge from those returned by scipy.sparse.linalg() "
+                      + "or np.linalg.eigvals().")
+    
     return (Q, top_eigenvalues, top_eigenvalues_error)
     
 
-def sorted_schur(P, m, method='brandts'):
+def sorted_schur(P, m, z='LM', method='brandts'):
+    """
+    Calculate an orthonormal basis of the subspace associated with the `m`
+    dominant eigenvalues of `P` using the Krylov-Schur method as implemented
+    in SLEPc.
+    
+    Parameters
+    ----------
+    P : ndarray (n,n)
+        Transition matrix (row-stochastic).
+        
+    m : int
+        Number of clusters to group into.
+        
+    z : string, (default='LM')
+        Specifies which portion of the spectrum is to be sought.
+        The subspace returned will be associated with this part 
+        of the spectrum.
+        Options are:
+        'LM': Largest magnitude (default).
+        'LR': Largest real parts.
+        
+    method : string, (default='brandts')
+        Which method to use.
+        Options are:
+        'brandts': Perform a full Schur decomposition of `P`
+         utilizing scipy.schur (but without the sorting option)
+         and sort the returned Schur form R and Schur vector 
+         matrix Q afterwards using a routine published by Brandts.
+        'krylov': Calculate an orthonormal basis of the subspace 
+         associated with the `m` dominant eigenvalues of `P` 
+         using the Krylov-Schur method as implemented in SLEPc.
+        'scipy': Perform a full Schur decomposition of `P` while
+         sorting up `m` dominant eigenvalues (and associated 
+         Schur vectors) at the same time.
+        
+    """
 
     if method == 'brandts':
+        # Calculate the top m+1 eigenvalues and secure that you
+        # don't separate conjugate eigenvalues (corresponding to 2x2-block in R),
+        # if you take the dominant m eigenvalues to cluster the data.
+        _ = top_eigenvalues(P, m, z=z)
+   
         # Make a Schur decomposition of P.
-        R, Q = schur(P_bar,output='real')
+        R, Q = schur(P_bar, output='real')
         
         # Sort the Schur matrix and vectors.
-        Q, R, ap = sort_real_schur(Q, R, z=np.inf, b=m)
+        Q, R, ap = sort_real_schur(Q, R, z=z, b=m)
         # Warnings
         if np.any(np.array(ap) > 1.0):
             warnings.warn("Reordering of Schur matrix was inaccurate!")
     elif method == 'scipy':
-        R, Q = sorted_scipy_schur(P, m)
+        R, Q = sorted_scipy_schur(P, m, z=z)
     elif method == 'krylov':
-        R, Q = sorted_krylov_schur(P, m)
+        Q, _, _ = sorted_krylov_schur(P, m, z=z)
     else:
         raise ValueError("Unknown method" + method)
-        
-    return (R, Q)
-    
+       
+    if method == 'krylov':
+        return Q
+    else:
+        return (R, Q)
