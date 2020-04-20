@@ -32,7 +32,9 @@ def sort_real_schur(Q, R, z, b, inplace=False):
         quasi-triangular real R such that AQ=QR
     :param z: complex
         target z in the complex plane
-        if z==float('inf'), order eigenvalues decreasingly by magnitude
+        Options are:
+        'LM': the m eigenvalues with the largest magnitude are sorted up.
+        'LR': the m eigenvalues with the largest real part are sorted up.
     :param b: float
         determines the length of the ordering with respect to z to be produced
         * if b < 0 then -b blocks will be sorted,
@@ -265,14 +267,17 @@ def select(p, z):
     :param z:
     :return:
     '''
-    if np.isinf(z):
+    if (z == 'LM'):
         pos = np.argmax(np.abs(p))
-        return -abs(p[pos]), pos
-    else:
-        y = np.real(z) + np.abs(np.imag(z))*1j  # Move target to the upper half plane.
-        delta = np.abs(np.array(p) - y)
-        pos = np.argmin(delta)  # Find block closest to the target.
-        return delta[pos], pos
+        return np.abs(p[pos]), pos
+    elseif (z == 'LR'):
+        pos = np.argmax(np.real(p))
+        return np.real(p[pos]), pos
+    #else:
+        #y = np.real(z) + np.abs(np.imag(z))*1j  # Move target to the upper half plane.
+        #delta = np.abs(np.array(p) - y)
+        #pos = np.argmin(delta)  # Find block closest to the target.
+        #return delta[pos], pos
 
 #  function [val,pos] = select(p,z);
 #  y = real(z)+abs(imag(z))*i;
