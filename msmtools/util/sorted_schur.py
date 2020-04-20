@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.linalg import schur
+from msmtools.util.sort_real_schur import sort_real_schur
 
 def top_eigenvalues(P, m, z='LM'):
     """
@@ -22,7 +23,6 @@ def top_eigenvalues(P, m, z='LM'):
         'LR': the m eigenvalues with the largest real part are sorted up.
         
     """
-    
     from scipy.sparse.linalg import eigs 
     
     n = np.shape(P)[0]
@@ -273,7 +273,6 @@ def sorted_schur(P, m, z='LM', method='brandts'):
          Schur vectors) at the same time.
         
     """
-
     if method == 'brandts':
         # Calculate the top m+1 eigenvalues and secure that you
         # don't separate conjugate eigenvalues (corresponding to 2x2-block in R),
