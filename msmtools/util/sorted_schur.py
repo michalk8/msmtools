@@ -153,7 +153,7 @@ def sorted_krylov_schur(P, m, z='LM'):
     #Calculate the top m+1 eigenvalues and secure that you
     # don't separate conjugate eigenvalues (corresponding to 2x2-block in R),
     # if you take the dominant m eigenvalues to cluster the data.
-    top_eigenvals = top_eigenvalues(P, m, z=z)
+    top_evals = top_eigenvalues(P, m, z=z)
     
     M = PETSc.Mat().create()
     M.createDense(list(np.shape(P)), array=P)
@@ -215,25 +215,25 @@ def sorted_krylov_schur(P, m, z='LM'):
         warnings.warn("The number of converged eigenpairs is " + str(nconv) + ", but " + str(m) 
                       + " clusters were requested. They should be the same!")
     # Collect the m dominant eigenvalues.
-    top_eigenvalues = []
-    top_eigenvalues_error = []
+    top_eigenvals = []
+    top_eigenvals_error = []
     for i in range(nconv):
         # Get the i-th eigenvalue as computed by solve().
         eigenval = E.getEigenvalue(i)
-        top_eigenvalues.append(eigenval)
+        top_eigenvals.append(eigenval)
         # Computes the error (based on the residual norm) associated with the i-th computed eigenpair.
         eigenval_error = E.computeError(i)
-        top_eigenvalues_error.append(eigenval_error)
-    top_eigenvalues = np.asarray(top_eigenvalues)
-    top_eigenvalues_error = np.asarray(top_eigenvalues_error)
+        top_eigenvals_error.append(eigenval_error)
+    top_eigenvals = np.asarray(top_eigenvals)
+    top_eigenvals_error = np.asarray(top_eigenvals_error)
     
     # Compare the eigenvalues returned by top_eigenvalues() with the one returned by SLEPc
-    if not np.allclose(top_eigenvalues, top_eigenvals[:m], rtol=1e-05, atol=1e-08):
+    if not np.allclose(top_eigenvals, top_evals[:m], rtol=1e-05, atol=1e-08):
         warnings.warn("Caution: The top eigenvalues returned by SLEPc using the Krylov-Schur "
                       + "method, diverge from those returned by scipy.sparse.linalg() "
                       + "or np.linalg.eigvals().")
     
-    return (Q, top_eigenvalues, top_eigenvalues_error)
+    return (Q, top_eigenvals, top_eigenvals_error)
     
 
 def sorted_schur(P, m, z='LM', method='brandts'):
