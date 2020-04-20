@@ -40,7 +40,8 @@ def top_eigenvalues(P, m, z='LM'):
             sorted_eigenvals = eigenvals[idx]
             top_eigenvals = sorted_eigenvals[::-1][:m+1]
         elif (z == 'LR'):
-            sorted_eigenvals = np.sort(np.linalg.eigvals(P))
+            #sorted_eigenvals = np.sort(eigenvals)
+            sorted_eigenvals = np.sort(np.real(eigenvals))
             top_eigenvals = sorted_eigenvals[::-1][:m+1]
     eigenval_in = top_eigenvals[m-1]
     eigenval_out = top_eigenvals[m]
