@@ -158,11 +158,12 @@ def sorted_krylov_schur(P, m, z='LM'):
     M = PETSc.Mat().create()
     M.createDense(list(np.shape(P)), array=P)
     # Creates EPS object.
-    E = SLEPc.EPS().create()
+    E = SLEPc.EPS()
+    E.create()
     # Set the matrix associated with the eigenvalue problem.
     E.setOperators(M)
     # Select the particular solver to be used in the EPS object: Krylov-Schur
-    E.setType(EPS.Type.KRYLOVSCHUR)
+    E.setType(SLEPc.EPS.Type.KRYLOVSCHUR)
     # Set the number of eigenvalues to compute and the dimension of the subspace.
     E.setDimensions(nev=m)
     # Specify which portion of the spectrum is to be sought. 
