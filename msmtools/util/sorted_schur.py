@@ -1,11 +1,10 @@
 import numpy as np
 from scipy.linalg import schur
 
-def sorted_scipy_schur(P, m, z='LM'):
+def top_eigenvalues(P, m, z='LM'):
     """
-    Calculate an orthonormal basis of the subspace associated with the `m`
-    dominant eigenvalues of `P` using the Krylov-Schur method as implemented
-    in SLEPc.
+    Sort the `m+1` dominant eigenvalues up and check, if clustering into 
+    `m` clusters would split a complex conjugated pair of eigenvalues.
     
     Parameters
     ----------
@@ -23,12 +22,15 @@ def sorted_scipy_schur(P, m, z='LM'):
         'LR': the m eigenvalues with the largest real part are sorted up.
         
     """
+    
     from scipy.sparse.linalg import eigs 
     
     n = np.shape(P)[0]
     
     if ((m + 1) < (n - 1)):
         top_eigenvals, _ = eigs(P, k=m+1, which=z)
+        if np.any(np.isnan(top_eigenvals)):
+            raise ValueError("Some of the top m eigenvalues of P are NaN!")
     else: 
         eigenvals = np.linalg.eigvals(P)
         if np.any(np.isnan(eigenvals)):
@@ -45,7 +47,37 @@ def sorted_scipy_schur(P, m, z='LM'):
     
     # Don't separate conjugate eigenvalues (corresponding to 2x2-block in R).
     if np.isclose(eigenval_in, eigenval_out):
-        raise ValueError("Clustering into " + str(m) " clusters will split conjugate eigenvalues!")
+        raise ValueError("Clustering into " + str(m) " clusters will split conjugate eigenvalues! "
+                         + " Request one cluster more or less.")
+        
+    return top_eigenvals
+
+
+def sorted_scipy_schur(P, m, z='LM'):
+    """
+    Perform a full Schur decomposition of `P` while sorting up `m`
+    dominant eigenvalues (and associated Schur vectors) at the same time.
+    
+    Parameters
+    ----------
+    P : ndarray (n,n)
+        Transition matrix (row-stochastic).
+        
+    m : int
+        Number of clusters to group into.
+        
+    z : string, (default='LM')
+        Specifies which portion of the spectrum is to be sought.
+        The subspace returned will be associated with this part of the spectrum.
+        Options are:
+        'LM': the m eigenvalues with the largest magnitude are sorted up.
+        'LR': the m eigenvalues with the largest real part are sorted up.
+        
+    """
+    top_eigenvals = top_eigenvalues(P, m, z=z)
+    
+    eigenval_in = top_eigenvals[m-1]
+    eigenval_out = top_eigenvals[m]
         
     if z == 'LM':
         # Determine the cutoff for sorting in schur().
@@ -57,7 +89,12 @@ def sorted_scipy_schur(P, m, z='LM'):
         cutoff = (np.real(eigenval_in) + np.real(eigenval_out)) / 2.0 
 
         R, Q, sdim = schur(P, sort=lambda x: np.real(x) > cutoff)
-        
+    
+    # Check, if m eigenvalues were really sorted up.
+    if not (sdim == m):
+        raise ValueError(str(m) + " dominant eigenvalues (associated with the "
+                         + "same amount of clusters) were requested, but only " 
+                         + str(sdim) + " were sorted up in the Schur form!")
     return (R, Q)
 
 
@@ -163,7 +200,6 @@ def sorted_krylov_schur(P, m, z='LM'):
     top_eigenvalues_error = np.asarray(top_eigenvalues_error)
     
     return (Q, top_eigenvalues, top_eigenvalues_error)
-        
     
 
 def sorted_schur(P, m, method='brandts'):
