@@ -107,6 +107,25 @@ def sorted_krylov_schur(P, m, z='LM'):
     Calculate an orthonormal basis of the subspace associated with the `m`
     dominant eigenvalues of `P` using the Krylov-Schur method as implemented
     in SLEPc.
+    ------------------------------------------------------------------------
+    To use this method you need to have petsc, petsc4py, selpc, and slepc4py
+    installed. For optimal performance it is highly recommended that you also
+    have mpi (at least version 2) and mpi4py installed.
+    The installation can be a little tricky sometimes, but the following
+    approach was successfull on Ubuntu 18.04:
+    update first via ``sudo apt-get update`` and ``sudo apt-get upgrade``;
+    to install mpi-2 execute ``sudo apt-get install libopenmpi-dev``;
+    install mpi4py via ``pip install --user mpi4py`` 
+    (or ``pip install --user numpy mpi4py`, if you don't have numpy installed);
+    first install petsc via ``pip install --user petsc`` followed by
+    ``pip install --user petsc4py`` to install petsc4py;
+    finally install slepc and slepc4py via ``pip install --user slepc slepc4py``.
+    During installation of petsc, petsc4py, selpc, and slepc4py the following
+    error might appear several times 
+    `` ERROR: Failed building wheel for [insert package name here]``,
+    but this doesn't matter if the installer finally tells you
+    ``Successfully installed [insert package name here]``.
+    ------------------------------------------------------
     
     Parameters
     ----------
