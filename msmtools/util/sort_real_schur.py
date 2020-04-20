@@ -270,7 +270,7 @@ def select(p, z):
     if (z == 'LM'):
         pos = np.argmax(np.abs(p))
         return np.abs(p[pos]), pos
-    elseif (z == 'LR'):
+    elif (z == 'LR'):
         pos = np.argmax(np.real(p))
         return np.real(p[pos]), pos
     #else:
