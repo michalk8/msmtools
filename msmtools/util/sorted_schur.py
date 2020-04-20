@@ -230,7 +230,7 @@ def sorted_krylov_schur(P, m, z='LM'):
     top_eigenvals_error = np.asarray(top_eigenvals_error)
     
     # Compare the eigenvalues returned by top_eigenvalues() with the one returned by SLEPc
-    if not np.allclose(top_eigenvals, top_evals[:m], rtol=1e-05, atol=1e-08):
+    if not np.allclose(top_eigenvals[:m], top_evals[:m], rtol=1e-05, atol=1e-08):
         warnings.warn("Caution: The top eigenvalues returned by SLEPc using the Krylov-Schur "
                       + "method, diverge from those returned by scipy.sparse.linalg() "
                       + "or np.linalg.eigvals().")
