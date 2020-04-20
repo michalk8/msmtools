@@ -43,7 +43,7 @@ def top_eigenvalues(P, m, z='LM'):
             eigenval_in = top_eigenvals[m-1]
             eigenval_out = top_eigenvals[m]
             # Don't separate conjugate eigenvalues (corresponding to 2x2-block in R).
-            if np.isclose(eigenval_in, eigenval_out):
+            if np.isclose(eigenval_in, np.conj(eigenval_out)):
                 raise ValueError("Clustering into " + str(m) + " clusters will split conjugate eigenvalues! "
                                  + " Request one cluster more or less.")
         elif (z == 'LR'):
