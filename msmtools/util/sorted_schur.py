@@ -3,7 +3,7 @@ from scipy.linalg import schur
 from msmtools.util.sort_real_schur import sort_real_schur
 
 def top_eigenvalues(P, m, z='LM'):
-    """
+    r"""
     Sort the `m+1` dominant eigenvalues up and check, if clustering into 
     `m` clusters would split a complex conjugated pair of eigenvalues.
     
@@ -55,7 +55,7 @@ def top_eigenvalues(P, m, z='LM'):
 
 
 def sorted_scipy_schur(P, m, z='LM'):
-    """
+    r"""
     Perform a full Schur decomposition of `P` while sorting up `m`
     dominant eigenvalues (and associated Schur vectors) at the same time.
     
@@ -103,7 +103,7 @@ def sorted_scipy_schur(P, m, z='LM'):
 
 
 def sorted_krylov_schur(P, m, z='LM'):
-    """
+    r"""
     Calculate an orthonormal basis of the subspace associated with the `m`
     dominant eigenvalues of `P` using the Krylov-Schur method as implemented
     in SLEPc.
@@ -237,7 +237,7 @@ def sorted_krylov_schur(P, m, z='LM'):
     
 
 def sorted_schur(P, m, z='LM', method='brandts'):
-    """
+    r"""
     Calculate an orthonormal basis of the subspace associated with the `m`
     dominant eigenvalues of `P` using the Krylov-Schur method as implemented
     in SLEPc.
