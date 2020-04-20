@@ -3,9 +3,25 @@ from scipy.linalg import schur
 
 def sorted_scipy_schur(P, m, z='LM'):
     """
+    Calculate an orthonormal basis of the subspace associated with the `m`
+    dominant eigenvalues of `P` using the Krylov-Schur method as implemented
+    in SLEPc.
+    
+    Parameters
+    ----------
+    P : ndarray (n,n)
+        Transition matrix (row-stochastic).
+        
+    m : int
+        Number of clusters to group into.
+        
     z : string, (default='LM')
-        If 'LM', the m eigenvalues with the largest magnitude are sorted up.
-        If 'LR', the m eigenvalues with the largest real part are sorted up.
+        Specifies which portion of the spectrum is to be sought.
+        The subspace returned will be associated with this part of the spectrum.
+        Options are:
+        'LM': the m eigenvalues with the largest magnitude are sorted up.
+        'LR': the m eigenvalues with the largest real part are sorted up.
+        
     """
     from scipy.sparse.linalg import eigs 
     
@@ -45,7 +61,28 @@ def sorted_scipy_schur(P, m, z='LM'):
     return (R, Q)
 
 
-def sorted_krylov_schur(P, m):
+def sorted_krylov_schur(P, m, z='LM'):
+    """
+    Calculate an orthonormal basis of the subspace associated with the `m`
+    dominant eigenvalues of `P` using the Krylov-Schur method as implemented
+    in SLEPc.
+    
+    Parameters
+    ----------
+    P : ndarray (n,n)
+        Transition matrix (row-stochastic).
+        
+    m : int
+        Number of clusters to group into.
+        
+    z : string, (default='LM')
+        Specifies which portion of the spectrum is to be sought.
+        The subspace returned will be associated with this part of the spectrum.
+        Options are:
+        'LM': Largest magnitude (default).
+        'LR': Largest real parts.
+        
+    """
     try:
         from petsc4py import PETSc
         from slepc4py import SLEPc 
@@ -55,17 +92,77 @@ def sorted_krylov_schur(P, m):
         
     M = PETSc.Mat().create()
     M.createDense(list(np.shape(P)), array=P)
+    # Creates EPS object.
     E = SLEPc.EPS().create()
+    # Set the matrix associated with the eigenvalue problem.
     E.setOperators(M)
-    E.setDimensions(nev=n)
-    E.setWhichEigenpairs(E.Which.LARGEST_REAL)
+    # Select the particular solver to be used in the EPS object: Krylov-Schur
+    E.setType(EPS.Type.KRYLOVSCHUR)
+    # Set the number of eigenvalues to compute and the dimension of the subspace.
+    E.setDimensions(nev=m)
+    # Specify which portion of the spectrum is to be sought. 
+    # All possible Options are:
+    # (see: https://slepc.upv.es/slepc4py-current/docs/apiref/slepc4py.SLEPc.EPS.Which-class.html)
+    # LARGEST_MAGNITUDE: Largest magnitude (default).
+    # LARGEST_REAL: Largest real parts.
+    # LARGEST_IMAGINARY: Largest imaginary parts in magnitude.
+    # SMALLEST_MAGNITUDE: Smallest magnitude.
+    # SMALLEST_REAL: Smallest real parts.
+    # SMALLEST_IMAGINARY: Smallest imaginary parts in magnitude.
+    # TARGET_MAGNITUDE: Closest to target (in magnitude).
+    # TARGET_REAL: Real part closest to target.
+    # TARGET_IMAGINARY: Imaginary part closest to target.
+    # ALL: All eigenvalues in an interval.
+    # USER: User defined ordering.
+    if z == 'LM':
+        E.setWhichEigenpairs(E.Which.LARGEST_MAGNITUDE)
+    elif z == 'LR':
+        E.setWhichEigenpairs(E.Which.LARGEST_REAL)
+    # Solve the eigensystem.
     E.solve()
+    # getInvariantSubspace() gets an orthonormal basis of the computed invariant subspace.
+    # It returns a list of vectors.
+    # The returned vectors span an invariant subspace associated with the computed eigenvalues.
+    # OPEN QUESTION: Are we sure that the returned basis vector are always real??
+    # WE NEED REAL VECTORS! G-PCCA and PCCA only work with real vectors!!
+    # We take the sequence of 1-D arrays and stack them as columns to make a single 2-D array.
     X = np.column_stack([x.array for x in E.getInvariantSubspace()])
-    # this seems to do the same as scipy.schur, but if too many converge the
-    # space is too big
-    # cuting off seems to work, but we dont really know
     
-    return X[:, :m]
+    # Raise, if X contains complex values!
+    if not np.all(np.isreal(X)):
+        raise TypeError("The orthonormal basis of the subspace returned by Krylov-Schur is not real!", 
+                        "G-PCCA needs real basis vectors to work.")
+    
+    # The above seems to do the same as scipy.schur with sorting, 
+    # but if too many converge the returned space is too big.
+    # Cuting the rest off seems to work, but we don't know for sure...
+    # So we warn, if this happens.
+    if not (np.shape(X)[1] == m):
+        warnings.warn("The size of the orthonormal basis of the subspace returned by Krylov-Schur " 
+                      + "is to large. The excess is cut off, but it can't be garanteed that this is sane!")
+    # Cut off, if too large.
+    Q = X[:, :m]
+    
+    # Gets the number of converged eigenpairs. 
+    nconv = E.getConverged()
+    # Warn, if nconv smaller than m.
+    if not (nconv == m):
+        warnings.warn("The number of converged eigenpairs is " + str(nconv) + ", but " + str(m) 
+                      + " clusters were requested. They should be the same!")
+    # Collect the m dominant eigenvalues.
+    top_eigenvalues = []
+    top_eigenvalues_error = []
+    for i in range(nconv):
+        # Get the i-th eigenvalue as computed by solve().
+        eigenval = E.getEigenvalue(i)
+        top_eigenvalues.append(eigenval)
+        # Computes the error (based on the residual norm) associated with the i-th computed eigenpair.
+        eigenval_error = E.computeError(i)
+        top_eigenvalues_error.append(eigenval_error)
+    top_eigenvalues = np.asarray(top_eigenvalues)
+    top_eigenvalues_error = np.asarray(top_eigenvalues_error)
+    
+    return (Q, top_eigenvalues, top_eigenvalues_error)
         
     
 
