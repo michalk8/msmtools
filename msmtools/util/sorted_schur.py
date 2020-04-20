@@ -240,9 +240,9 @@ def sorted_krylov_schur(P, m, z='LM'):
 
 def sorted_schur(P, m, z='LM', method='brandts'):
     r"""
-    Calculate an orthonormal basis of the subspace associated with the `m`
-    dominant eigenvalues of `P` using the Krylov-Schur method as implemented
-    in SLEPc.
+    Return `m` dominant real Schur vectors or an orthonormal basis
+    spanning the same invariant subspace, utilizing selectable methods
+    (see parameter `method` for details).
     
     Parameters
     ----------
