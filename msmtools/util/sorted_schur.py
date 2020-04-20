@@ -280,7 +280,7 @@ def sorted_schur(P, m, z='LM', method='brandts'):
         _ = top_eigenvalues(P, m, z=z)
    
         # Make a Schur decomposition of P.
-        R, Q = schur(P_bar, output='real')
+        R, Q = schur(P, output='real')
         
         # Sort the Schur matrix and vectors.
         Q, R, ap = sort_real_schur(Q, R, z=z, b=m)
