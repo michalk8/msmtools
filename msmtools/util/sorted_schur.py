@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.linalg import schur
 from msmtools.util.sort_real_schur import sort_real_schur
+import warnings
 
 def top_eigenvalues(P, m, z='LM'):
     r"""
