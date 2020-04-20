@@ -40,17 +40,22 @@ def top_eigenvalues(P, m, z='LM'):
             idx = np.argsort(np.abs(eigenvals))
             sorted_eigenvals = eigenvals[idx]
             top_eigenvals = sorted_eigenvals[::-1][:m+1]
+            eigenval_in = top_eigenvals[m-1]
+            eigenval_out = top_eigenvals[m]
+            # Don't separate conjugate eigenvalues (corresponding to 2x2-block in R).
+            if np.isclose(eigenval_in, eigenval_out):
+                raise ValueError("Clustering into " + str(m) + " clusters will split conjugate eigenvalues! "
+                                 + " Request one cluster more or less.")
         elif (z == 'LR'):
             #sorted_eigenvals = np.sort(eigenvals)
             sorted_eigenvals = np.sort(np.real(eigenvals))
             top_eigenvals = sorted_eigenvals[::-1][:m+1]
-    eigenval_in = top_eigenvals[m-1]
-    eigenval_out = top_eigenvals[m]
-    
-    # Don't separate conjugate eigenvalues (corresponding to 2x2-block in R).
-    if np.isclose(eigenval_in, eigenval_out):
-        raise ValueError("Clustering into " + str(m) + " clusters will split conjugate eigenvalues! "
-                         + " Request one cluster more or less.")
+            eigenval_in = top_eigenvals[m-1]
+            eigenval_out = top_eigenvals[m]
+            # Don't separate conjugate eigenvalues (corresponding to 2x2-block in R).
+            if np.isclose(eigenval_in, eigenval_out):
+                raise ValueError("Clustering into " + str(m) + " clusters will split conjugate eigenvalues! "
+                                 + " Request one cluster more or less.")
         
     return top_eigenvals
 
