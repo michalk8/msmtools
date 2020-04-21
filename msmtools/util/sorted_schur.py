@@ -142,7 +142,7 @@ def sorted_scipy_schur(P, m, z='LM'):
         R, Q, sdim = schur(P, sort=lambda x: np.real(x) > cutoff)
     
     # Check, if m eigenvalues were really sorted up.
-    if not (sdim == m):
+    if (sdim < m):
         raise ValueError(str(m) + " dominant eigenvalues (associated with the "
                          + "same amount of clusters) were requested, but only " 
                          + str(sdim) + " were sorted up in the Schur form!")
