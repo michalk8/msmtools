@@ -24,35 +24,74 @@ def top_eigenvalues(P, m, z='LM'):
         'LR': the m eigenvalues with the largest real part are sorted up.
         
     """
-    from scipy.sparse.linalg import eigs 
+#     n = np.shape(P)[0]
     
-    n = np.shape(P)[0]
+#     if not ((m + 1) < (n - 1)):
+#         from scipy.linalg import eigvals
+#         eigenvals = eigvals(P)
+#         if np.any(np.isnan(eigenvals)):
+#             raise ValueError("Some eigenvalues of P are NaN!")
+#         if (z == 'LM'):
+#             idx = np.argsort(np.abs(eigenvals))
+#             sorted_eigenvals = eigenvals[idx]
+#             top_eigenvals = sorted_eigenvals[::-1][:m+1]
+#         elif (z == 'LR'):
+#             idx = np.argsort(np.real(eigenvals))
+#             sorted_eigenvals = eigenvals[idx]
+#             top_eigenvals = sorted_eigenvals[::-1][:m+1]
+#     else: 
+    from petsc4py import PETSc
+    from slepc4py import SLEPc 
     
-    if ((m + 1) < (n - 1)):
-        top_eigenvals, _ = eigs(P, k=m+1, which=z)
-        if np.any(np.isnan(top_eigenvals)):
-            raise ValueError("Some of the top m eigenvalues of P are NaN!")
-    else: 
-        eigenvals = np.linalg.eigvals(P)
-        if np.any(np.isnan(eigenvals)):
-            raise ValueError("Some eigenvalues of P are NaN!")
-        if (z == 'LM'):
-            idx = np.argsort(np.abs(eigenvals))
-            sorted_eigenvals = eigenvals[idx]
-            top_eigenvals = sorted_eigenvals[::-1][:m+1]
-        elif (z == 'LR'):
-            idx = np.argsort(np.real(eigenvals))
-            sorted_eigenvals = eigenvals[idx]
-            top_eigenvals = sorted_eigenvals[::-1][:m+1]
-        
-        eigenval_in = top_eigenvals[m-1]
-        eigenval_out = top_eigenvals[m]
-        # Don't separate conjugate eigenvalues (corresponding to 2x2-block in R).
-        if np.isclose(eigenval_in, np.conj(eigenval_out)):
-            raise ValueError("Clustering into " + str(m) + " clusters will split conjugate eigenvalues! "
-                             + " Request one cluster more or less.")
+    # Initialize boolean to indicate, if a 2x2-block is split.
+    block_split = False
+    
+    M = PETSc.Mat().create()
+    M.createDense(list(np.shape(P)), array=P)
+    # Creates EPS object.
+    E = SLEPc.EPS()
+    E.create()
+    # Set the matrix associated with the eigenvalue problem.
+    E.setOperators(M)
+    # Select the particular solver to be used in the EPS object: Krylov-Schur
+    E.setType(SLEPc.EPS.Type.KRYLOVSCHUR)
+    # Set the number of eigenvalues to compute and the dimension of the subspace.
+    E.setDimensions(nev=m+1)
+    if z == 'LM':
+        E.setWhichEigenpairs(E.Which.LARGEST_MAGNITUDE)
+    elif z == 'LR':
+        E.setWhichEigenpairs(E.Which.LARGEST_REAL)
+    # Solve the eigensystem.
+    E.solve()
+    
+    # Gets the number of converged eigenpairs. 
+    nconv = E.getConverged()
+    # Warn, if nconv smaller than m.
+    if (nconv < m+1):
+        warnings.warn("The number of converged eigenpairs ncov=" + str(ncov)
+                      + " is too small.")
+    # Collect the m dominant eigenvalues.
+    top_eigenvals = []
+    top_eigenvals_error = []
+    for i in range(nconv):
+        # Get the i-th eigenvalue as computed by solve().
+        eigenval = E.getEigenvalue(i)
+        top_eigenvals.append(eigenval)
+        # Computes the error (based on the residual norm) associated with the i-th computed eigenpair.
+        eigenval_error = E.computeError(i)
+        top_eigenvals_error.append(eigenval_error)
+    top_eigenvals = np.asarray(top_eigenvals)
+    top_eigenvals_error = np.asarray(top_eigenvals_error)
+    
+    eigenval_in = top_eigenvals[m-1]
+    eigenval_out = top_eigenvals[m]
+    # Don't separate conjugate eigenvalues (corresponding to 2x2-block in R).
+    if np.isclose(eigenval_in, np.conj(eigenval_out)):
+        block_split = True
+        warnings.warn("Clustering into " + str(m) + " clusters will split conjugate eigenvalues! "
+                      + " Request one cluster more or less.")
                 
-    return top_eigenvals
+    return (top_eigenvals, block_split)
 
 
 def sorted_scipy_schur(P, m, z='LM'):
@@ -144,12 +183,8 @@ def sorted_krylov_schur(P, m, z='LM'):
         'LR': Largest real parts.
         
     """
-    try:
-        from petsc4py import PETSc
-        from slepc4py import SLEPc 
-    except ImportError as err:
-        raise ImportError("Couldn't import SELPc and PETSc: Can't use Krylov-Schur method "
-                          + "to construct a sorted partial Schur vector matrix." + err) 
+    from petsc4py import PETSc
+    from slepc4py import SLEPc 
     
     #Calculate the top m+1 eigenvalues and secure that you
     # don't separate conjugate eigenvalues (corresponding to 2x2-block in R),
