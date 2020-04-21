@@ -68,7 +68,7 @@ def top_eigenvalues(P, m, z='LM'):
     nconv = E.getConverged()
     # Warn, if nconv smaller than m.
     if (nconv < m+2):
-        warnings.warn("The number of converged eigenpairs ncov=" + str(ncov)
+        warnings.warn("The number of converged eigenpairs nconv=" + str(nconv)
                       + " is too small.")
     # Collect the m dominant eigenvalues.
     top_eigenvals = []
