@@ -344,7 +344,7 @@ def sorted_krylov_schur(P, m, z='LM'):
     
     dummy = np.concatenate((np.dot(P, Q), np.dot(Q, np.diag(top_eigenvals[:m]))), axis=1)
     if not ( ( matrix_rank(dummy) - matrix_rank(np.dot(P, Q)) ) == 0 ):
-        warn.warnings("Krylov Schur didn't return the invariant subspace associated with "
+        warnings.warn("Krylov Schur didn't return the invariant subspace associated with "
                       + "the top m eigenvalues, since P*Q and Q*L don't "
                       + "span the same subspace (L is a diagonal matrix with the "
                       + "sorted top eigenvalues on the diagonal).")
