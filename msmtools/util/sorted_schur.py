@@ -118,7 +118,12 @@ def sorted_scipy_schur(P, m, z='LM'):
     # Calculate the top m+1 eigenvalues and secure that you
     # don't separate conjugate eigenvalues (corresponding to 2x2-block in R),
     # if you take the dominant m eigenvalues to cluster the data.
-    top_eigenvals = top_eigenvalues(P, m, z=z)
+    top_eigenvals, block_split = top_eigenvalues(P, m, z=z)
+    
+    if (block_split == True):
+        raise ValueError("Clustering P into " + str(m) + " clusters will split "
+                         + "a pair of conjugate eigenvalues! Choose one cluster "
+                         + "more or less.")
     
     eigenval_in = top_eigenvals[m-1]
     eigenval_out = top_eigenvals[m]
@@ -185,11 +190,6 @@ def sorted_krylov_schur(P, m, z='LM'):
     """
     from petsc4py import PETSc
     from slepc4py import SLEPc 
-    
-    #Calculate the top m+1 eigenvalues and secure that you
-    # don't separate conjugate eigenvalues (corresponding to 2x2-block in R),
-    # if you take the dominant m eigenvalues to cluster the data.
-    top_evals = top_eigenvalues(P, m, z=z)
     
     M = PETSc.Mat().create()
     M.createDense(list(np.shape(P)), array=P)
@@ -263,12 +263,12 @@ def sorted_krylov_schur(P, m, z='LM'):
         top_eigenvals_error.append(eigenval_error)
     top_eigenvals = np.asarray(top_eigenvals)
     top_eigenvals_error = np.asarray(top_eigenvals_error)
-    
-    # Compare the eigenvalues returned by top_eigenvalues() with the one returned by SLEPc
-    if not np.allclose(top_eigenvals[:m], top_evals[:m], rtol=1e-05, atol=1e-08):
-        warnings.warn("Caution: The top eigenvalues returned by SLEPc using the Krylov-Schur "
-                      + "method, diverge from those returned by scipy.sparse.linalg() "
-                      + "or np.linalg.eigvals().")
+
+    # Secure that you don't separate conjugate eigenvalues (corresponding to 2x2-block in R),
+    # if you take the dominant m eigenvalues to cluster the data.  
+    if np.isclose(top_eigenvals[m], np.conj(top_eigenvals[m-1])):
+        raise ValueError("Clustering into " + str(m) + " clusters will split conjugate eigenvalues! "
+                         + " Request one cluster more or less.")
     
     return (Q, top_eigenvals, top_eigenvals_error)
     
