@@ -5,8 +5,9 @@ import warnings
 
 def top_eigenvalues(P, m, z='LM'):
     r"""
-    Sort the `m+1` dominant eigenvalues up and check, if clustering into 
-    `m` clusters would split a complex conjugated pair of eigenvalues.
+    Sort `m+1` (if ``m < n``) or `m` (if ``m == n``) dominant eigenvalues 
+    up and check, if clustering into `m` clusters would split 
+    a complex conjugated pair of eigenvalues.
     
     Parameters
     ----------
@@ -24,7 +25,13 @@ def top_eigenvalues(P, m, z='LM'):
         'LR': the m eigenvalues with the largest real part are sorted up.
         
     """
+    from numpy.linalg import matrix_rank
+    
     n = np.shape(P)[0]
+    if m < n:
+        k = m + 1
+    elif m == n:
+        k = m
     
 #     if not ((m + 1) < (n - 1)):
 #         from scipy.linalg import eigvals
@@ -56,7 +63,7 @@ def top_eigenvalues(P, m, z='LM'):
     # Select the particular solver to be used in the EPS object: Krylov-Schur
     E.setType(SLEPc.EPS.Type.KRYLOVSCHUR)
     # Set the number of eigenvalues to compute and the dimension of the subspace.
-    E.setDimensions(nev=m+2)
+    E.setDimensions(nev=k)
     if z == 'LM':
         E.setWhichEigenpairs(E.Which.LARGEST_MAGNITUDE)
     elif z == 'LR':
@@ -67,7 +74,7 @@ def top_eigenvalues(P, m, z='LM'):
     # Gets the number of converged eigenpairs. 
     nconv = E.getConverged()
     # Warn, if nconv smaller than m.
-    if (nconv < m+2):
+    if (nconv < k):
         warnings.warn("The number of converged eigenpairs nconv=" + str(nconv)
                       + " is too small.")
     # Collect the m dominant eigenvalues.
@@ -132,13 +139,13 @@ def sorted_scipy_schur(P, m, z='LM'):
     if z == 'LM':
         # Determine the cutoff for sorting in schur().
         #cutoff = (np.abs(eigenval_in) + np.abs(eigenval_out)) / 2.0 
-        cutoff = np.abs(top_eigenvals[m-1]) - 0.1
+        cutoff = np.abs(top_eigenvals[m-1]) - 0.2
 
         R, Q, sdim = schur(P, sort=lambda x: np.abs(x) > cutoff)
     elif z == 'LR':
         # Determine the cutoff for sorting in schur().
         #cutoff = (np.real(eigenval_in) + np.real(eigenval_out)) / 2.0 
-        cutoff = np.real(top_eigenvals[m-1]) - 0.1
+        cutoff = np.real(top_eigenvals[m-1]) - 0.2
 
         R, Q, sdim = schur(P, sort=lambda x: np.real(x) > cutoff)
     
@@ -147,6 +154,11 @@ def sorted_scipy_schur(P, m, z='LM'):
         raise ValueError(str(m) + " dominant eigenvalues (associated with the "
                          + "same amount of clusters) were requested, but only " 
                          + str(sdim) + " were sorted up in the Schur form!")
+        
+    dummy = np.concatenate((np.dot(P, Q), np.dot(Q, R)), axis=1)
+    if not ( ( matrix_rank(dummy) - matrix_rank(np.dot(P, Q) ) ) == 0 ):
+        raise ValueError("X doesn't span a invariant subspace of P!")
+    
     return (R, Q)
 
 
@@ -254,16 +266,18 @@ def sorted_krylov_schur(P, m, z='LM'):
     # So we warn, if this happens.
     if not (np.shape(X)[1] == m):
         warnings.warn("The size of the orthonormal basis of the subspace returned by Krylov-Schur " 
-                      + "is to large. The excess is cut off, but it can't be garanteed that this is sane!")
+                      + "is to large. The excess is cut off. This should be ok as long as no error "
+                      + "is raised later, when testing, if the remaining subspace Q[:,:m] is an "
+                      + "invariant subspace associated with the sorted top m eigenvalues.")
     # Cut off, if too large.
     Q = X[:, :m]
     
     # Gets the number of converged eigenpairs. 
     nconv = E.getConverged()
     # Warn, if nconv smaller than m.
-    if not (nconv == m):
-        warnings.warn("The number of converged eigenpairs is " + str(nconv) + ", but " + str(m) 
-                      + " clusters were requested. They should be the same!")
+    if (nconv < m):
+        warnings.warn("The number of converged eigenpairs is " + str(nconv) 
+                      + ", but " + str(m) + " clusters were requested.")
     # Collect the m dominant eigenvalues.
     top_eigenvals = []
     top_eigenvals_error = []
@@ -276,6 +290,13 @@ def sorted_krylov_schur(P, m, z='LM'):
         top_eigenvals_error.append(eigenval_error)
     top_eigenvals = np.asarray(top_eigenvals)
     top_eigenvals_error = np.asarray(top_eigenvals_error)
+    
+    dummy = np.concatenate((np.dot(P, Q), np.dot(Q, np.diag(top_eigenvals[:m]))), axis=1)
+    if not ( ( matrix_rank(dummy) - matrix_rank(np.dot(P, Q) ) ) == 0 ):
+        raise ValueError("Krylov Schur didn't return the invariant subspace associated with "
+                         + "the top m eigenvalues, since :math:`P Q` and :math`Q L` don't "
+                         + "span the same subspace (:math:`L` is a diagonal matrix with the 
+                         + "sorted top eigenvalues on the diagonal).")
     
     return (Q, top_eigenvals, top_eigenvals_error)
     
