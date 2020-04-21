@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.linalg import schur
 from msmtools.util.sort_real_schur import sort_real_schur
+from numpy.linalg import matrix_rank
 import warnings
 
 def top_eigenvalues(P, m, z='LM'):
@@ -24,9 +25,7 @@ def top_eigenvalues(P, m, z='LM'):
         'LM': the m eigenvalues with the largest magnitude are sorted up.
         'LR': the m eigenvalues with the largest real part are sorted up.
         
-    """
-    from numpy.linalg import matrix_rank
-    
+    """    
     n = np.shape(P)[0]
     if m < n:
         k = m + 1
