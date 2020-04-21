@@ -101,6 +101,52 @@ def top_eigenvalues(P, m, z='LM'):
     return (top_eigenvals, block_split)
 
 
+def smallest_eigenvalue(P, z='LM'):
+    r"""
+    Find the smallest eigenvalue according to an selectable criterion.
+    
+    Parameters
+    ----------
+    P : ndarray (n,n)
+        
+    z : string, (default='LM')
+        Criterion according ti which the smallest eigenvalue is selected.
+        Options are:
+        'SM': eigenvalue with the smallest magnitude.
+        'SR': eigenvalue with the smallest real part.
+        
+    """    
+    from petsc4py import PETSc
+    from slepc4py import SLEPc 
+    
+    M = PETSc.Mat().create()
+    M.createDense(list(np.shape(P)), array=P)
+    # Creates EPS object.
+    E = SLEPc.EPS()
+    E.create()
+    # Set the matrix associated with the eigenvalue problem.
+    E.setOperators(M)
+    # Select the particular solver to be used in the EPS object: Krylov-Schur
+    E.setType(SLEPc.EPS.Type.KRYLOVSCHUR)
+    # Set the number of eigenvalues to compute and the dimension of the subspace.
+    E.setDimensions(nev=1)
+    if z == 'SM':
+        E.setWhichEigenpairs(E.Which.SMALLEST_MAGNITUDE)
+    elif z == 'SR':
+        E.setWhichEigenpairs(E.Which.SMALLEST_REAL)
+    # Solve the eigensystem.
+    E.solve()
+
+    nconv = E.getConverged()
+    # Warn, if nconv smaller than 1.
+    if (nconv < 1):
+        warnings.warn("The number of converged eigenpairs is too small.")
+    # Get the smallest eigenvalue.
+    smallest_eigenval = E.getEigenvalue(0)
+    
+    return smallest_eigenval
+
+
 def sorted_scipy_schur(P, m, z='LM'):
     r"""
     Perform a full Schur decomposition of `P` while sorting up `m`
@@ -134,17 +180,23 @@ def sorted_scipy_schur(P, m, z='LM'):
     
     #eigenval_in = top_eigenvals[m-1]
     #eigenval_out = top_eigenvals[m]
+    # Get the smallest eigenvalue.
+    smallest_eigenval = smallest_eigenvalue(P, z=z)
         
     if z == 'LM':
         # Determine the cutoff for sorting in schur().
         #cutoff = (np.abs(eigenval_in) + np.abs(eigenval_out)) / 2.0 
         cutoff = np.abs(top_eigenvals[m-1]) - 0.2
-
+        if cutoff < smallest_eigenval:
+            cutoff = smallest_eigenval
+            
         R, Q, sdim = schur(P, sort=lambda x: np.abs(x) > cutoff)
     elif z == 'LR':
         # Determine the cutoff for sorting in schur().
         #cutoff = (np.real(eigenval_in) + np.real(eigenval_out)) / 2.0 
         cutoff = np.real(top_eigenvals[m-1]) - 0.2
+        if cutoff < smallest_eigenval:
+            cutoff = smallest_eigenval
 
         R, Q, sdim = schur(P, sort=lambda x: np.real(x) > cutoff)
     
@@ -291,11 +343,11 @@ def sorted_krylov_schur(P, m, z='LM'):
     top_eigenvals_error = np.asarray(top_eigenvals_error)
     
     dummy = np.concatenate((np.dot(P, Q), np.dot(Q, np.diag(top_eigenvals[:m]))), axis=1)
-    if not ( ( matrix_rank(dummy) - matrix_rank(np.dot(P, Q) ) ) == 0 ):
-        raise ValueError("Krylov Schur didn't return the invariant subspace associated with "
-                         + "the top m eigenvalues, since P*Q and Q*L don't "
-                         + "span the same subspace (L is a diagonal matrix with the "
-                         + "sorted top eigenvalues on the diagonal).")
+    if not ( ( matrix_rank(dummy) - matrix_rank(np.dot(P, Q)) ) == 0 ):
+        warn.warnings("Krylov Schur didn't return the invariant subspace associated with "
+                      + "the top m eigenvalues, since P*Q and Q*L don't "
+                      + "span the same subspace (L is a diagonal matrix with the "
+                      + "sorted top eigenvalues on the diagonal).")
     
     return (Q, top_eigenvals, top_eigenvals_error)
     
