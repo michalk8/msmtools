@@ -194,7 +194,15 @@ def sorted_krylov_schur(P, m, z='LM'):
     from petsc4py import PETSc
     from slepc4py import SLEPc 
     
-    n = np.shape(P)[0]
+    # Calculate the top m+1 eigenvalues and secure that you
+    # don't separate conjugate eigenvalues (corresponding to 2x2-block in R),
+    # if you take the dominant m eigenvalues to cluster the data.
+    top_eigenvals, block_split = top_eigenvalues(P, m, z=z)
+    
+    if (block_split == True):
+        raise ValueError("Clustering P into " + str(m) + " clusters will split "
+                         + "a pair of conjugate eigenvalues! Choose one cluster "
+                         + "more or less.")
     
     M = PETSc.Mat().create()
     M.createDense(list(np.shape(P)), array=P)
@@ -268,13 +276,6 @@ def sorted_krylov_schur(P, m, z='LM'):
         top_eigenvals_error.append(eigenval_error)
     top_eigenvals = np.asarray(top_eigenvals)
     top_eigenvals_error = np.asarray(top_eigenvals_error)
-
-    if (m < n):
-        # Secure that you don't separate conjugate eigenvalues (corresponding to 2x2-block in R),
-        # if you take the dominant m eigenvalues to cluster the data.  
-        if np.isclose(top_eigenvals[m], np.conj(top_eigenvals[m-1])):
-            raise ValueError("Clustering into " + str(m) + " clusters will split conjugate eigenvalues! "
-                             + " Request one cluster more or less.")
     
     return (Q, top_eigenvals, top_eigenvals_error)
     
