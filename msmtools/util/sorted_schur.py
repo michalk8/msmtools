@@ -130,12 +130,14 @@ def sorted_scipy_schur(P, m, z='LM'):
         
     if z == 'LM':
         # Determine the cutoff for sorting in schur().
-        cutoff = (np.abs(eigenval_in) + np.abs(eigenval_out)) / 2.0 
+        #cutoff = (np.abs(eigenval_in) + np.abs(eigenval_out)) / 2.0 
+        cutoff = np.abs(eigenval_out)
 
         R, Q, sdim = schur(P, sort=lambda x: np.abs(x) > cutoff)
     elif z == 'LR':
         # Determine the cutoff for sorting in schur().
-        cutoff = (np.real(eigenval_in) + np.real(eigenval_out)) / 2.0 
+        #cutoff = (np.real(eigenval_in) + np.real(eigenval_out)) / 2.0 
+        cutoff = np.real(eigenval_out)
 
         R, Q, sdim = schur(P, sort=lambda x: np.real(x) > cutoff)
     
