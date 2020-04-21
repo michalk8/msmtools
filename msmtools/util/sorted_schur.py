@@ -194,7 +194,7 @@ def sorted_krylov_schur(P, m, z='LM'):
     from petsc4py import PETSc
     from slepc4py import SLEPc 
     
-    n = np.shape(P)[n]
+    n = np.shape(P)[0]
     
     M = PETSc.Mat().create()
     M.createDense(list(np.shape(P)), array=P)
