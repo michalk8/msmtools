@@ -56,7 +56,7 @@ def top_eigenvalues(P, m, z='LM'):
     # Select the particular solver to be used in the EPS object: Krylov-Schur
     E.setType(SLEPc.EPS.Type.KRYLOVSCHUR)
     # Set the number of eigenvalues to compute and the dimension of the subspace.
-    E.setDimensions(nev=m+1)
+    E.setDimensions(nev=m+2)
     if z == 'LM':
         E.setWhichEigenpairs(E.Which.LARGEST_MAGNITUDE)
     elif z == 'LR':
@@ -67,7 +67,7 @@ def top_eigenvalues(P, m, z='LM'):
     # Gets the number of converged eigenpairs. 
     nconv = E.getConverged()
     # Warn, if nconv smaller than m.
-    if (nconv < m+1):
+    if (nconv < m+2):
         warnings.warn("The number of converged eigenpairs ncov=" + str(ncov)
                       + " is too small.")
     # Collect the m dominant eigenvalues.
@@ -125,19 +125,19 @@ def sorted_scipy_schur(P, m, z='LM'):
                          + "a pair of conjugate eigenvalues! Choose one cluster "
                          + "more or less.")
     
-    eigenval_in = top_eigenvals[m-1]
-    eigenval_out = top_eigenvals[m]
+    #eigenval_in = top_eigenvals[m-1]
+    #eigenval_out = top_eigenvals[m]
         
     if z == 'LM':
         # Determine the cutoff for sorting in schur().
         #cutoff = (np.abs(eigenval_in) + np.abs(eigenval_out)) / 2.0 
-        cutoff = np.abs(eigenval_out)
+        cutoff = np.abs(top_eigenvals[m+1])
 
         R, Q, sdim = schur(P, sort=lambda x: np.abs(x) > cutoff)
     elif z == 'LR':
         # Determine the cutoff for sorting in schur().
         #cutoff = (np.real(eigenval_in) + np.real(eigenval_out)) / 2.0 
-        cutoff = np.real(eigenval_out)
+        cutoff = np.real(top_eigenvals[m+2])
 
         R, Q, sdim = schur(P, sort=lambda x: np.real(x) > cutoff)
     
