@@ -24,7 +24,7 @@ def top_eigenvalues(P, m, z='LM'):
         'LR': the m eigenvalues with the largest real part are sorted up.
         
     """
-#     n = np.shape(P)[0]
+    n = np.shape(P)[0]
     
 #     if not ((m + 1) < (n - 1)):
 #         from scipy.linalg import eigvals
@@ -83,13 +83,14 @@ def top_eigenvalues(P, m, z='LM'):
     top_eigenvals = np.asarray(top_eigenvals)
     top_eigenvals_error = np.asarray(top_eigenvals_error)
     
-    eigenval_in = top_eigenvals[m-1]
-    eigenval_out = top_eigenvals[m]
-    # Don't separate conjugate eigenvalues (corresponding to 2x2-block in R).
-    if np.isclose(eigenval_in, np.conj(eigenval_out)):
-        block_split = True
-        warnings.warn("Clustering into " + str(m) + " clusters will split conjugate eigenvalues! "
-                      + " Request one cluster more or less.")
+    if (m < n):
+        eigenval_in = top_eigenvals[m-1]
+        eigenval_out = top_eigenvals[m]
+        # Don't separate conjugate eigenvalues (corresponding to 2x2-block in R).
+        if np.isclose(eigenval_in, np.conj(eigenval_out)):
+            block_split = True
+            warnings.warn("Clustering into " + str(m) + " clusters will split conjugate eigenvalues! "
+                          + " Request one cluster more or less.")
                 
     return (top_eigenvals, block_split)
 
@@ -266,11 +267,12 @@ def sorted_krylov_schur(P, m, z='LM'):
     top_eigenvals = np.asarray(top_eigenvals)
     top_eigenvals_error = np.asarray(top_eigenvals_error)
 
-    # Secure that you don't separate conjugate eigenvalues (corresponding to 2x2-block in R),
-    # if you take the dominant m eigenvalues to cluster the data.  
-    if np.isclose(top_eigenvals[m], np.conj(top_eigenvals[m-1])):
-        raise ValueError("Clustering into " + str(m) + " clusters will split conjugate eigenvalues! "
-                         + " Request one cluster more or less.")
+    if (m < n):
+        # Secure that you don't separate conjugate eigenvalues (corresponding to 2x2-block in R),
+        # if you take the dominant m eigenvalues to cluster the data.  
+        if np.isclose(top_eigenvals[m], np.conj(top_eigenvals[m-1])):
+            raise ValueError("Clustering into " + str(m) + " clusters will split conjugate eigenvalues! "
+                             + " Request one cluster more or less.")
     
     return (Q, top_eigenvals, top_eigenvals_error)
     
