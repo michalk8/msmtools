@@ -988,6 +988,14 @@ class GPCCA(object):
         
     def minChi(self, m_min, m_max):
         r"""
+        Calculate the minChi indicator (see [1]_) for every 
+        :math:`m \in [m_{min},m_{max}]`. The minChi indicator can be
+        used to determine an interval :math:`I \subset [m_{min},m_{max}]` 
+        of good (potentially optimal) numbers of clusters. 
+        Afterwards either one :math:`m \in I`(with maximal `minChi`) or 
+        the whole interval :math:`I` is choosen as input for `optimize` 
+        (for further optimization).
+
         Parameters
         ----------
         m_min : int
