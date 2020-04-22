@@ -33,6 +33,7 @@ import warnings
 import numpy as np
 from scipy.sparse import issparse
 import math
+from msmtools.analysis import is_transition_matrix
 
 # Machine double floating precision:
 eps = np.finfo(np.float64).eps
@@ -576,98 +577,6 @@ def _cluster_by_isa(X):
     return (chi, minChi)
 
 
-def use_minChi(P, eta, m_min, m_max, X=None, R=None):
-    r"""
-    Parameters
-    ----------
-    P : ndarray (n,n)
-        Transition matrix (row-stochastic).
-        
-    eta : ndarray (n,) 
-        Input probability distribution of the (micro)states.
-        In theory this can be an arbitray distribution as long as it is 
-        a valid probability distribution (i.e., sums up to 1).
-        A neutral and valid choice would be the uniform distribution.
-        In case of a reversible transition matrix, 
-        use the stationary probability distribution ``pi`` here.
-
-    m_min : int
-        Minimal number of clusters to group into.
-        
-    m_max : int
-        Maximal number of clusters to group into.
-        
-    X : ndarray (n,m), (default=None)
-        Matrix with :math:`m \geq m_{max}` sorted Schur vectors in the columns.
-        The constant Schur vector is in the first column.
-        
-    R : ndarray (m,m), (default=None)
-        Sorted real (partial) Schur matrix `R` of `P` such that
-        :math:`\tilde{P} Q = Q R` with the sorted (partial) matrix 
-        of Schur vectors :math:`Q` holds and :math:`m \geq m_{max}`.
-        
-    Returns
-    -------
-    X : ndarray (n,m)
-        Matrix with ``m`` sorted Schur vectors in the columns.
-        The constant Schur vector is in the first column.
-        
-    R : ndarray (m,m)
-        Sorted real (partial) Schur matrix `R` of `P` such that
-        :math:`\tilde{P} Q = Q R` with the sorted (partial) matrix 
-        of Schur vectors :math:`Q` holds.
-        
-    minChi_list : list of ``m_max - m_min`` floats (double)
-        List of minChi indicators for cluster numbers :math:`m \in [m_{min},m_{max}], see [1]_ and [2]_.
-        
-    References
-    ----------
-    .. [1] S. Roeblitz and M. Weber, Fuzzy spectral clustering by PCCA+:
-           application to Markov state models and data classification.
-           Adv Data Anal Classif 7, 147-179 (2013).
-           https://doi.org/10.1007/s11634-013-0134-6
-    .. [2] Reuter, B., Weber, M., Fackeldey, K., Röblitz, S., & Garcia, M. E. (2018). Generalized
-           Markov State Modeling Method for Nonequilibrium Biomolecular Dynamics: Exemplified on
-           Amyloid β Conformational Dynamics Driven by an Oscillating Electric Field. Journal of
-           Chemical Theory and Computation, 14(7), 3579–3594. https://doi.org/10.1021/acs.jctc.8b00079
-        
-    """
-    from msmtools.analysis import is_transition_matrix
-    
-    # Validate Input.
-    n = np.shape(P)[0]
-    if not is_transition_matrix(P):
-        raise ValueError("Input matrix P is not a transition matrix.")
-    if not (m_min < m_max):
-        raise ValueError("m_min must be smaller than m_max!")
-    if m_min in [0,1]:
-        raise ValueError("There is no point in clustering into", str(m), "clusters!")
-        
-    if ( (X is not None) and (R is not None) ):
-        Xdim1, Xdim2 = X.shape
-        Rdim1, Rdim2 = R.shape
-        if not (Xdim1 == n):
-            raise ValueError("The first dimension of X is " + str(Xdim1) + ". This doesn't match "
-                             + "with the dimension of P (" + str(n) + "," + str(n) + ")!")
-        if not (Rdim1 == Rdim2):
-            raise ValueError("The Schur form R is not quadratic!")
-        if not (Xdim2 == Rdim1):
-            raise ValueError("The second dimension of X is " + str(Xdim2) + ". This doesn't match "
-                                 + "with the dimensions of R (" + str(Rdim1) + "," + str(Rdim2) + ")!")
-        if not (Rdim2 >= m_max):
-            X, R = _do_schur(P, eta, m_max)
-    else:
-        X, R = _do_schur(P, eta, m_max)
-    
-    minChi_list = []
-    for m in range(m_min, m_max + 1):
-        #Xm = np.copy(X[:, :m])
-        _, minChi = _cluster_by_isa(X[:, :m])
-        minChi_list.append(minChi)
-        
-    return (X, R, minChi_list)
-
-
 def _gpcca_core(X):
     r"""
     Core of the G-PCCA [1]_ spectral clustering method with optimized memberships.
@@ -1061,6 +970,56 @@ class GPCCA(object):
         In case of a reversible transition matrix, 
         use the stationary probability distribution ``pi`` here.
         
+    z : string, (default='LM')
+        Specifies which portion of the eigenvalue spectrum of `P` 
+        is to be sought. The invariant subspace of `P` that is  
+        returned will be associated with this part of the spectrum.
+        Options are:
+        'LM': Largest magnitude (default).
+        'LR': Largest real parts.
+        
+    method : string, (default='brandts')
+        Which method to use to determine the invariant subspace.
+        Options are:
+        'brandts': Perform a full Schur decomposition of `P`
+         utilizing scipy.schur (but without the sorting option)
+         and sort the returned Schur form R and Schur vector 
+         matrix Q afterwards using a routine published by Brandts.
+         This is well tested und thus the default method, 
+         although it is also the slowest choice.
+         'scipy': Perform a full Schur decomposition of `P` 
+         while sorting up `m` (`m` < `n`) dominant eigenvalues 
+         (and associated Schur vectors) at the same time.
+         This will be faster than `brandts`, if `P` is large 
+         (n > 1000) and you sort a large part of the spectrum,
+         because your number of clusters `m` is large (>20).
+         This is still experimental, so use with CAUTION!
+        'krylov': Calculate an orthonormal basis of the subspace 
+         associated with the `m` dominant eigenvalues of `P` 
+         using the Krylov-Schur method as implemented in SLEPc.
+         This is the fastest choice and especially suitable for 
+         very large `P`, but it is still experimental.
+         Use with CAUTION! 
+         ----------------------------------------------------
+         To use this method you need to have petsc, petsc4py, 
+         selpc, and slepc4py installed. For optimal performance 
+         it is highly recommended that you also have mpi (at least 
+         version 2) and mpi4py installed. The installation can be 
+         a little tricky sometimes, but the following approach was 
+         successfull on Ubuntu 18.04:
+         ``sudo apt-get update & sudo apt-get upgrade``
+         ``sudo apt-get install libopenmpi-dev``
+         ``pip install --user mpi4py``
+         ``pip install --user petsc``
+         ``pip install --user petsc4py``
+         ``pip install --user slepc slepc4py``.
+         During installation of petsc, petsc4py, selpc, and 
+         slepc4py the following error might appear several times 
+         `` ERROR: Failed building wheel for [package name here]``,
+         but this doesn't matter if the installer finally tells you
+         ``Successfully installed [package name here]``.
+         ------------------------------------------------------
+        
     Properties
     ----------
     
@@ -1184,16 +1143,82 @@ class GPCCA(object):
 
     def __init__(self, P, eta):
         if issparse(P):
-            warnings.warn("gpcca is only implemented for dense matrices, "
+            warnings.warn("G-PCCA is only implemented for dense matrices, "
                           + "converting sparse transition matrix to dense ndarray.")
             P = P.toarray()
+        if not is_transition_matrix(P):
+            raise ValueError("Input matrix P is not a transition matrix.")
         self.P = P
         self.eta = eta
         self.X = None
         self.R = None
+        if z in ['LM','LR']:
+            self.z = z
+        else:
+            raise ValueError("You didn't give a valid sorting criterion z!")
+        self.method = method
         
         
     def minChi(self, m_min, m_max):
+        r"""
+        Parameters
+        ----------
+        m_min : int
+            Minimal number of clusters to group into.
+        
+        m_max : int
+            Maximal number of clusters to group into.
+        
+        Returns
+        -------
+        
+        minChi_list : list of ``m_max - m_min`` floats (double)
+            List of minChi indicators for cluster numbers :math:`m \in [m_{min},m_{max}], see [1]_ and [2]_.
+        
+        References
+        ----------
+        .. [1] S. Roeblitz and M. Weber, Fuzzy spectral clustering by PCCA+:
+               application to Markov state models and data classification.
+               Adv Data Anal Classif 7, 147-179 (2013).
+               https://doi.org/10.1007/s11634-013-0134-6
+        .. [2] Reuter, B., Weber, M., Fackeldey, K., Röblitz, S., & Garcia, M. E. (2018). Generalized
+               Markov State Modeling Method for Nonequilibrium Biomolecular Dynamics: Exemplified on
+               Amyloid β Conformational Dynamics Driven by an Oscillating Electric Field. Journal of
+               Chemical Theory and Computation, 14(7), 3579–3594. https://doi.org/10.1021/acs.jctc.8b00079
+        
+        """
+        n = np.shape(self.P)[0]
+        
+        # Validate Input.
+        if not (m_min < m_max):
+            raise ValueError("m_min must be smaller than m_max!")
+        if m_min in [0,1]:
+            raise ValueError("There is no point in clustering into", str(m), "clusters!")
+            
+        if self.method == 'krylov':
+            
+        else:
+        if ( (self.X is not None) and (self.R is not None) ):
+            Xdim1, Xdim2 = self.X.shape
+            Rdim1, Rdim2 = self.R.shape
+            if not (Xdim1 == n):
+                raise ValueError("The first dimension of X is " + str(Xdim1) + ". This doesn't match "
+                                 + "with the dimension of P (" + str(n) + "," + str(n) + ")!")
+            if not (Rdim1 == Rdim2):
+                raise ValueError("The Schur form R is not quadratic!")
+            if not (Xdim2 == Rdim1):
+                raise ValueError("The second dimension of X is " + str(Xdim2) + ". This doesn't match "
+                                 + "with the dimensions of R (" + str(Rdim1) + "," + str(Rdim2) + ")!")
+            if not (Rdim2 >= m_max):
+                self.X, self.R = _do_schur(self.P, self.eta, m_max, self.z, self.method)
+        else:
+            self.X, self.R = _do_schur(self.P, self.eta, m_max, self.z, self.method)
+    
+        minChi_list = []
+        for m in range(m_min, m_max + 1):
+            #Xm = np.copy(X[:, :m])
+            _, minChi = _cluster_by_isa(X[:, :m])
+            minChi_list.append(minChi)
         
         if ( (self.X is not None) and (self.R is not None) ):
             Rdim1, Rdim2 = self.R.shape
