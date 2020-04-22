@@ -138,7 +138,7 @@ def _gram_schmidt_mod(X, eta):
     return Q
 
 
-def _do_schur(P, eta, m):
+def _do_schur(P, eta, m, z='LM', method='brandts'):
     r"""
     This function performs a Schur decomposition of the (n,n) transition matrix `P`, with due regard 
     to the input (initial) distribution of states `eta` (which can be the stationary distribution ``pi``,
@@ -161,18 +161,43 @@ def _do_schur(P, eta, m):
     m : integer           
         Number of states or clusters, corresponding to the `m` dominant (largest) eigenvalues:
         
+    z : string, (default='LM')
+        Specifies which portion of the spectrum is to be sought.
+        The subspace returned will be associated with this part 
+        of the spectrum.
+        Options are:
+        'LM': Largest magnitude (default).
+        'LR': Largest real parts.
+        
+    method : string, (default='brandts')
+        Which method to use.
+        Options are:
+        'brandts': Perform a full Schur decomposition of `P`
+         utilizing scipy.schur (but without the sorting option)
+         and sort the returned Schur form R and Schur vector 
+         matrix Q afterwards using a routine published by Brandts.
+        'krylov': Calculate an orthonormal basis of the subspace 
+         associated with the `m` dominant eigenvalues of `P` 
+         using the Krylov-Schur method as implemented in SLEPc.
+        'scipy': Perform a full Schur decomposition of `P` while
+         sorting up `m` (`m` < `n`) dominant eigenvalues 
+         (and associated Schur vectors) at the same time.
+        
     Returns
     -------
+    
     X : ndarray (n,m)
-        Matrix containing the ordered `m` dominant Schur vectors columnwise.
+        Matrix containing the ordered `m` 
+        dominant Schur vectors columnwise.
+        
     R : ndarray (m,m)
         The ordered top left Schur form.
+        Only returned, if the chosen method is 
+        not the Krylov-Schur method.
     
     """
-    
-    from scipy.linalg import schur
     from scipy.linalg import subspace_angles
-    from msmtools.util.sort_real_schur import sort_real_schur
+    from msmtools.util.sorted_schur import sorted_schur
     
     # Exeptions
     N1 = P.shape[0]
@@ -192,28 +217,27 @@ def _do_schur(P, eta, m):
     # Weight the stochastic matrix P by the input (initial) distribution eta.
     P_bar = np.diag(np.sqrt(eta)).dot(P).dot(np.diag(1./np.sqrt(eta)))
 
-    # Make a Schur decomposition of P_bar.
-    R, Q = schur(P_bar,output='real') #TODO: 1. Use sort keyword of schur instead of sort_real_schur? 2. Implement Krylov-Schur (sorted partial Schur decomposition)
-
-    # Sort the Schur matrix and vectors.
-    Q, R, ap = sort_real_schur(Q, R, z=np.inf, b=m)
-    # Warnings
-    if np.any(np.array(ap) > 1.0):
-        warnings.warn("Reordering of Schur matrix was inaccurate!")
-    if m - 1 not in _find_twoblocks(R):
-        warnings.warn("Coarse-graining with " + str(m) + " states cuts through a block of "
-                      + "complex conjugate eigenvalues in the Schur form. The result will "
-                      + "be of questionable meaning. "
-                      + "Please increase/decrease number of states by one.")
+    # Make a Schur decomposition of P_bar and sort the Schur vectors (and form).
+    if method == 'krylov':
+        Q = sorted_schur(P, m, z, method)
+    else:
+        R, Q = sorted_schur(P, m, z, method)
+        if m - 1 not in _find_twoblocks(R):
+            warnings.warn("Coarse-graining with " + str(m) + " states cuts through "
+                          + "a block of complex conjugate eigenvalues in the Schur "
+                          + "form. The result will be of questionable meaning. "
+                          + "Please increase/decrease number of states by one.")
+        # Since the Schur form R and Schur vectors are only partially
+        # sorted, one doesn't need the whole R and Schur vector matrix Q.
+        # Take only the sorted Schur form and the vectors belonging to it.
+        R = R[0:m, 0:m]
         
-    # Since the Schur form R and Schur vectors are only partially
-    # sorted, one doesn't need the whole R and Schur vector matrix Q.
-    # Take only the sorted Schur form and the vectors belonging to it.
     Q = Q[:, 0:m]
-    R = R[0:m, 0:m]
-
-    # Orthonormalize the sorted Schur vectors Q via modified Gram-Schmidt-orthonormalization
-    Q = _gram_schmidt_mod(Q, eta)
+    
+    # Orthonormalize the sorted Schur vectors Q via modified Gram-Schmidt-orthonormalization,
+    # if the (Schur)vectors aren't orthogonal!
+    if not np.allclose(Q.T.dot(Q), np.eye(Q.shape[1]), rtol=1e6*eps, atol=1e6*eps):
+        Q = _gram_schmidt_mod(Q, eta)
          
     # Transform the orthonormalized Schur vectors of P_bar back to orthonormalized Schur vectors X of P.
     X = np.diag(1./np.sqrt(eta)).dot(Q)
@@ -221,16 +245,32 @@ def _do_schur(P, eta, m):
         raise ValueError("The number of rows n=%d of the Schur vector matrix X doesn't match those (n=%d) of P!" 
                          % (X.shape[0], P.shape[0]))
     # Raise, if the (Schur)vectors aren't D-orthogonal (don't fullfill the orthogonality condition)!
-    if not np.allclose(X.conj().T.dot(np.diag(eta)).dot(X), np.eye(X.shape[1]), rtol=1e6*eps, atol=1e6*eps):
+    if not np.allclose(X.conj().T.dot(np.diag(eta)).dot(X), np.eye(X.shape[1]), atol=1e-8, rtol=1e-5):
         raise ValueError("Schur vectors appear to not be D-orthogonal!")
     # Raise, if X doesn't fullfill the invariant subspace condition!
-    if not ( subspace_angles(np.dot(P, X), np.dot(X, R))[0] < 1e8 * eps ):
-        raise ValueError("X doesn't span a invariant subspace of P!")
+    if method == 'krylov':
+        dummy = subspace_angles(np.dot(P, X), X)
+    else:
+        dummy = subspace_angles(np.dot(P, X), np.dot(X, R))
+    test = np.all(np.allclose(dummy, 1e-8*eps, atol=1e-8, rtol=1e-5))
+    test1 = (dummy.shape[0] == m)
+    if not test:
+        raise ValueError("According to scipy.linalg.subspace_angles() X isn't an invariant "
+                         + "subspace of P, since the subspace angles between the column spaces "
+                         + "of P*X and X*R (resp. X, if you chose the Krylov-Schur method)"
+                         + "aren't near zero.")
+    elif not test1:
+        warnings.warn("According to scipy.linalg.subspace_angles() the dimension of the "
+                      + "column spaces of P*X and/or X*R (resp. X, if you chose the "
+                      + "Krylov-Schur method) is not equal to m.")
     # Raise, if the first column X[:,0] of the Schur vector matrix isn't constantly equal 1!
-    if not np.allclose(X[:,0], np.ones(X[:,0].shape), rtol=1e6*eps, atol=1e6*eps):
+    if not np.allclose(X[:,0], 1.0, atol=1e-8, rtol=1e-5):
         raise ValueError("The first column X[:,0] of the Schur vector matrix isn't constantly equal 1!")
                   
-    return X, R
+    if method == 'krylov'
+        return X
+    else:
+        return (X, R)
   
   
 def _objective(alpha, X):
