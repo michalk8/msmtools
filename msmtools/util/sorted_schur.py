@@ -349,12 +349,11 @@ def sorted_krylov_schur(P, m, z='LM'):
     # The above seems to do the same as scipy.schur with sorting, 
     # but if too many converge the returned space is too big.
     # Cuting the rest off seems to work, but we don't know for sure...
-    # So we warn, if this happens.
-    if not (np.shape(X)[1] == m):
-        warnings.warn("The size of the orthonormal basis of the subspace returned by Krylov-Schur " 
-                      + "is to large. The excess is cut off. This should be ok as long as no error "
-                      + "is raised later, when testing, if the remaining subspace Q[:,:m] is an "
-                      + "invariant subspace associated with the sorted top m eigenvalues.")
+#     if not (np.shape(X)[1] == m):
+#         warnings.warn("The size of the orthonormal basis of the subspace returned by Krylov-Schur " 
+#                       + "is to large. The excess is cut off. This should be ok as long as no error "
+#                       + "is raised later, when testing, if the remaining subspace Q[:,:m] is an "
+#                       + "invariant subspace associated with the sorted top m eigenvalues.")
     # Cut off, if too large.
     Q = X[:, :m]
     
