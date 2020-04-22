@@ -226,13 +226,14 @@ def sorted_scipy_schur(P, m, z='LM'):
     dummy2 = np.concatenate((dummy, dummy1), axis=1)
     dummy3 = subspace_angles(dummy, dummy1)
     test1 = ( ( matrix_rank(dummy2) - matrix_rank(dummy) ) == 0 )
-    test2 = np.all(np.allclose(dummy3, 1e-8*eps, atol=1e-8, rtol=1e-5))
+    test2 = np.all(np.allclose(dummy3, 0.0, atol=1e-8, rtol=1e-5))
     if not test2:
         raise ValueError("According to scipy.linalg.subspace_angles() sorted Scipy-Schur didn't "
                          + "return the invariant subspace associated with the top m eigenvalues, "
                          + "since the subspace angles between the column spaces of P*Q and Q*L"
                          + "aren't near zero (L is a diagonal matrix with the "
-                         + "sorted top eigenvalues on the diagonal).")
+                         + "sorted top eigenvalues on the diagonal). The subspace angles are: "
+                         + str(dummy3))
     elif not test1:
         warnings.warn("According to numpy.linalg.matrix_rank() sorted Scipy-Schur didn't "
                       + "return the invariant subspace associated with the top m "
@@ -376,20 +377,27 @@ def sorted_krylov_schur(P, m, z='LM'):
     dummy2 = np.concatenate((dummy, dummy1), axis=1)
     dummy3 = subspace_angles(dummy, dummy1)
     test1 = ( ( matrix_rank(dummy2) - matrix_rank(dummy) ) == 0 )
-    test2 = np.all(np.allclose(dummy3, 1e-8*eps, atol=1e-8, rtol=1e-5))
+    test2 = np.allclose(dummy3, 0.0, atol=1e-8, rtol=1e-5)
     test3 = (dummy3.shape[0] == m)
-    if not test2:
+    dummy4 = subspace_angles(dummy, Q)
+    test4 = np.allclose(dummy4, 0.0, atol=1e-6, rtol=1e-5)
+    if not test4:
         raise ValueError("According to scipy.linalg.subspace_angles() Krylov-Schur didn't "
-                         + "return the invariant subspace associated with the top m eigenvalues, "
-                         + "since the subspace angles between the column spaces of P*Q and Q*L"
-                         + "aren't near zero (L is a diagonal matrix with the "
-                         + "sorted top eigenvalues on the diagonal).")
+                         + "return an invariant subspace of P! The subspace angles are: "
+                         + str(dummy4))
     elif not test1:
         warnings.warn("According to numpy.linalg.matrix_rank() Krylov-Schur didn't "
                       + "return the invariant subspace associated with the top m "
                       + " eigenvalues, since (P*Q|Q*L) (horizontally stacked) and P*Q don't "
                       + "have the same rank (L is a diagonal matrix with the "
                       + "sorted top eigenvalues on the diagonal).")
+    elif not test2:
+        warnings.warn("According to scipy.linalg.subspace_angles() Krylov-Schur didn't "
+                      + "return the invariant subspace associated with the top m eigenvalues, "
+                      + "since the subspace angles between the column spaces of P*Q and Q*L "
+                      + "aren't near zero (L is a diagonal matrix with the "
+                      + "sorted top eigenvalues on the diagonal). The subspace angles are: "
+                      + str(dummy3))
     elif not test3:
         warnings.warn("According to scipy.linalg.subspace_angles() the dimension of the "
                       + "column space of P*Q and/or Q*L is not equal to m (L is a diagonal "
