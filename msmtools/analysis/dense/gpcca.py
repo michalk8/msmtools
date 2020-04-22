@@ -34,6 +34,7 @@ import numpy as np
 from scipy.sparse import issparse
 import math
 from msmtools.analysis import is_transition_matrix
+from msmtools.estimation import connected_sets
 
 # Machine double floating precision:
 eps = np.finfo(np.float64).eps
@@ -639,214 +640,6 @@ def _gpcca_core(X):
     crispness = (m - fopt) / m
 
     return (chi, rot_matrix, crispness)
-
-
-def gpcca(P, eta, m, X=None, R=None, full_output=False):
-    r"""
-    Full G-PCCA [1]_ spectral clustering method with optimized memberships and the option
-    to optimize the number of clusters (macrostates) `m` as well.
-
-    If a single integer `m` is given, the method clusters the dominant `m` Schur vectors
-    of the transition matrix `P`. The algorithm generates a fuzzy clustering such that the
-    resulting membership functions `chi` are as crisp (characteristic) as possible given `m`.
-    
-    Instead of a single number of clusters `m`, a dict `m` containing a minimum and a maximum
-    number of clusters can be given. This results in repeated execution of the G-PCCA
-    core algorithm for :math:`m \in [m_{min},m_{max}]`. Among the resulting clusterings
-    the sharpest/crispest one (with maximal `crispness`) will be selected.
-
-    Parameters
-    ----------
-    P : ndarray (n,n)
-        Transition matrix (row-stochastic).
-        
-    eta : ndarray (n,) 
-        Input probability distribution of the (micro)states.
-        In theory this can be an arbitray distribution as long as it is a valid 
-        probability distribution (i.e., sums up to 1). A neutral and valid choice 
-        would be the uniform distribution. In case of a reversible transition matrix, 
-        use the stationary probability distribution ``pi`` here.
-
-    m : int or dict
-        If int: number of clusters to group into.
-        If dict: minmal and maximal number of clusters `m_min` and `m_max` given as
-        a dict `{'m_min': int, 'm_max': int}`.
-        
-    X : ndarray (n,m), (default=None)
-        Matrix with :math:`m \geq m_{max}` sorted Schur vectors in the columns.
-        The constant Schur vector is in the first column.
-        
-    R : ndarray (m,m), (default=None)
-        Sorted real (partial) Schur matrix `R` of `P` such that
-        :math:`\tilde{P} Q = Q R` with the sorted (partial) matrix 
-        of Schur vectors :math:`Q` holds and :math:`m \geq m_{max}`.
-        
-    full_output : boolean, (default=False)
-        If False, only the optimal results `chi`, `rot_matrix`, `crispness` and the
-        matrices `X`, `R` will be returned.
-        If True, the optimal results `chi`, `rot_matrix`, `crispness`, the matrices `X`, `R`
-        and lists containing results for all :math:`m \in [m_{min},m_{max}]` will be returned.
-
-    Returns
-    -------
-    chi : ndarray (n,m)
-        A matrix containing the membership (or probability) of each state (to be assigned) 
-        to each cluster. The rows sum up to 1.
-        
-    rot_matrix : ndarray (m,m)
-        Optimized rotation matrix that rotates the dominant Schur vectors to yield the 
-        G-PCCA memberships, i.e., ``chi = X * rot_matrix``.
-        
-    X : ndarray (n,m)
-        Matrix with `m` sorted Schur vectors in the columns.
-        The constant Schur vector is in the first column.
-        
-    R : ndarray (m,m)
-        Sorted real (partial) Schur matrix `R` of `P` such that
-        :math:`\tilde{P} Q = Q R` with the sorted (partial) matrix 
-        of Schur vectors :math:`Q` holds.
-        
-    crispness : float (double)
-        The crispness :math:`\xi \in [0,1]` quantifies the optimality of the solution (higher is better). 
-        It characterizes how crisp (sharp) the decomposition of the state space into `m` clusters is.
-        It is given via (Eq. 17 from [2]_):
-        
-        ..math: \xi = (m - f_{opt}) / m = \mathtt{trace}(S) / m 
-                    = \mathtt{trace}(\tilde{D} \chi^T D \chi) / m -> \mathtt{max}
-        
-        with :math:`D` being a diagonal matrix with `eta` on its diagonal.
-        
-    chi_list : list of ndarrays
-        List of (n,m) membership matrices for all :math:`m \in [m_{min},m_{max}]`.
-        Only returned, if `full_output=True`.
-        
-    rot_matrix_list : list of ndarrays
-        List of (m,m) rotation matrices for all :math:`m \in [m_{min},m_{max}]`.
-        Only returned, if `full_output=True`.
-        
-    crispness_list : list of floats (double)
-        List of crispness indicators for all :math:`m \in [m_{min},m_{max}]`.
-        If the membership matrix for a `m` supports less than `m` clusters,
-        the associated value in `crispness_list` will be `-crispness`
-        instead of `crispness`.
-        Only returned, if `full_output=True`.
-        
-    References
-    ----------
-    .. [1] Reuter, B., Weber, M., Fackeldey, K., Röblitz, S., & Garcia, M. E. (2018). Generalized
-           Markov State Modeling Method for Nonequilibrium Biomolecular Dynamics: Exemplified on
-           Amyloid β Conformational Dynamics Driven by an Oscillating Electric Field. Journal of
-           Chemical Theory and Computation, 14(7), 3579–3594. https://doi.org/10.1021/acs.jctc.8b00079
-
-    .. [2] S. Roeblitz and M. Weber, Fuzzy spectral clustering by PCCA+:
-           application to Markov state models and data classification.
-           Adv Data Anal Classif 7, 147-179 (2013).
-           https://doi.org/10.1007/s11634-013-0134-6
-
-    Copyright (c) 2020 Bernhard Reuter, Susanna Roeblitz and Marcus Weber, 
-    Zuse Institute Berlin, Takustrasse 7, 14195 Berlin
-    ----------------------------------------------
-    If you use this code or parts of it, cite [1]_.
-    ----------------------------------------------
-    
-    """
-    # imports
-    from msmtools.estimation import connected_sets
-    from msmtools.analysis import is_transition_matrix
-    
-    # extract m_min, m_max, if given, else take single m
-    if isinstance(m, dict):
-        m_min = m.get('m_min', None)
-        m_max = m.get('m_max', None)
-        if not (m_min < m_max):
-            raise ValueError("m_min must be smaller than m_max!")
-        m_list = [m_min, m_max]
-    elif isinstance(m, int):
-        m_list = [m]
-            
-    # validate input
-    n = np.shape(P)[0]
-    if not is_transition_matrix(P):
-        raise ValueError("Input matrix P is not a transition matrix.")
-    if (max(m_list) > n):
-        raise ValueError("Number of macrostates m = " + str(max(m_list))+
-                         " exceeds number of states of the transition matrix n = " + str(n) + ".")
-    if min(m_list) in [0,1]:
-        raise ValueError("There is no point in clustering into", str(m), "clusters!")
-    
-    # test connectivity
-    components = connected_sets(P)
-    n_components = len(components)
-    # Store components as closed (with positive equilibrium distribution)
-    # or as transition states (with vanishing equilibrium distribution).
-    closed_components = []
-    for i in range(n_components):
-        component = components[i]
-        rest = list(set(range(n)) - set(component))
-        # is component closed?
-        if (np.sum(P[component, :][:, rest]) == 0):
-            closed_components.append(component)
-    n_closed_components = len(closed_components)
-    
-    # Calculate Schur matrix R and Schur vector matrix X, if not adequately given.
-    if ( (X is not None) and (R is not None) ):
-        Xdim1, Xdim2 = X.shape
-        Rdim1, Rdim2 = R.shape
-        if not (Xdim1 == n):
-            raise ValueError("The first dimension of X is " + str(Xdim1) + ". This doesn't match "
-                             + "with the dimension of P (" + str(n) + "," + str(n) + ")!")
-        if not (Rdim1 == Rdim2):
-            raise ValueError("The Schur form R is not quadratic!")
-        if not (Xdim2 == Rdim1):
-            raise ValueError("The second dimension of X is " + str(Xdim2) + ". This doesn't match "
-                                 + "with the dimensions of R (" + str(Rdim1) + "," + str(Rdim2) + ")!")
-        if not (Rdim2 >= max(m_list)):
-            X, R = _do_schur(P, eta, max(m_list))
-    else:
-        X, R = _do_schur(P, eta, max(m_list))
-            
-    # Initialize lists to collect results.
-    chi_list = []
-    rot_matrix_list = []
-    crispness_list = []
-    # Iterate over m
-    for m in range(min(m_list), max(m_list) + 1):
-        # Reduce R according to m.
-        Rm = R[:m, :m]
-        if m - 1 not in _find_twoblocks(Rm):
-            warnings.warn("Coarse-graining with " + str(m) + " states cuts through a block of "
-                          + "complex conjugate eigenvalues in the Schur form. The result will "
-                          + "be of questionable meaning. "
-                          + "Please increase/decrease number of states by one.")
-        ## Reduce X according to m and make a work copy.
-        #Xm = np.copy(X[:, :m])
-        chi, rot_matrix, crispness = _gpcca_core(X[:, :m])
-        # check if we have at least m dominant sets. If less than m, we warn.
-        nmeta = np.count_nonzero(chi.sum(axis=0))
-        if (m > nmeta):
-            crispness_list.append(-crispness)
-            warnings.warn(str(m) + " macrostates requested, but transition matrix only has " 
-                          + str(nmeta) + " macrostates. Request less macrostates.")
-        # Check, if we have enough clusters to support the disconnected sets.
-        elif (m < n_closed_components):
-            crispness_list.append(-crispness)
-            warnings.warn("Number of metastable states m = " + str(m) + " is too small. Transition matrix has "
-                          + str(n_closed_components) + " disconnected components.")
-        else:
-            crispness_list.append(crispness)
-        chi_list.append(chi)
-        rot_matrix_list.append(rot_matrix)
-        
-    opt_idx = np.argmax(crispness_list)
-    m_opt = min(m_list) + opt_idx
-    chi = chi_list[opt_idx]
-    rot_matrix = rot_matrix_list[opt_idx]
-    crispness = crispness_list[opt_idx]
-    
-    if full_output:
-        return (chi, rot_matrix, crispness, X, R, chi_list, rot_matrix_list, crispness_list)
-    else:
-        return (chi, rot_matrix, crispness, X, R)
     
     
 def coarsegrain(P, eta, chi):
@@ -1161,6 +954,36 @@ class GPCCA(object):
         else:
             raise ValueError("You didn't give a valid method to determine "
                              + "the invariant subspace")
+            
+            
+    def _do_schur_helper(self, m):
+        n = np.shape(self.P)[0]
+        if self.method == 'krylov':
+            if (self.X is not None):
+                Xdim1, Xdim2 = self.X.shape
+                if not (Xdim1 == n):
+                    raise ValueError("The first dimension of X is " + str(Xdim1) + ". This doesn't match "
+                                     + "with the dimension of P (" + str(n) + "," + str(n) + ")!")
+                if not (Xdim2 >= m):
+                    self.X = _do_schur(self.P, self.eta, m, self.z, self.method)
+            else:
+                self.X = _do_schur(self.P, self.eta, m, self.z, self.method)
+        else:
+            if ( (self.X is not None) and (self.R is not None) ):
+                Xdim1, Xdim2 = self.X.shape
+                Rdim1, Rdim2 = self.R.shape
+                if not (Xdim1 == n):
+                    raise ValueError("The first dimension of X is " + str(Xdim1) + ". This doesn't match "
+                                     + "with the dimension of P (" + str(n) + "," + str(n) + ")!")
+                if not (Rdim1 == Rdim2):
+                    raise ValueError("The Schur form R is not quadratic!")
+                if not (Xdim2 == Rdim1):
+                    raise ValueError("The second dimension of X is " + str(Xdim2) + ". This doesn't match "
+                                     + "with the dimensions of R (" + str(Rdim1) + "," + str(Rdim2) + ")!")
+                if not (Rdim2 >= m):
+                    self.X, self.R = _do_schur(self.P, self.eta, m, self.z, self.method)
+            else:
+                self.X, self.R = _do_schur(self.P, self.eta, m, self.z, self.method)
         
         
     def minChi(self, m_min, m_max):
@@ -1198,45 +1021,23 @@ class GPCCA(object):
             raise ValueError("m_min must be smaller than m_max!")
         if m_min in [0,1]:
             raise ValueError("There is no point in clustering into", str(m), "clusters!")
-            
-        if self.method == 'krylov':
-            if (self.X is not None):
-                Xdim1, Xdim2 = self.X.shape
-                if not (Xdim1 == n):
-                    raise ValueError("The first dimension of X is " + str(Xdim1) + ". This doesn't match "
-                                     + "with the dimension of P (" + str(n) + "," + str(n) + ")!")
-                if not (Xdim2 >= m_max):
-                    self.X = _do_schur(self.P, self.eta, m_max, self.z, self.method)
-            else:
-                self.X = _do_schur(self.P, self.eta, m_max, self.z, self.method)
-        else:
-            if ( (self.X is not None) and (self.R is not None) ):
-                Xdim1, Xdim2 = self.X.shape
-                Rdim1, Rdim2 = self.R.shape
-                if not (Xdim1 == n):
-                    raise ValueError("The first dimension of X is " + str(Xdim1) + ". This doesn't match "
-                                     + "with the dimension of P (" + str(n) + "," + str(n) + ")!")
-                if not (Rdim1 == Rdim2):
-                    raise ValueError("The Schur form R is not quadratic!")
-                if not (Xdim2 == Rdim1):
-                    raise ValueError("The second dimension of X is " + str(Xdim2) + ". This doesn't match "
-                                     + "with the dimensions of R (" + str(Rdim1) + "," + str(Rdim2) + ")!")
-                if not (Rdim2 >= m_max):
-                    self.X, self.R = _do_schur(self.P, self.eta, m_max, self.z, self.method)
-            else:
-                self.X, self.R = _do_schur(self.P, self.eta, m_max, self.z, self.method)
+        
+        # Calculate Schur matrix R and Schur vector matrix X, if not adequately given.
+        _do_schur_helper(m_max)
     
         minChi_list = []
         for m in range(m_min, m_max + 1):
             #Xm = np.copy(X[:, :m])
-            _, minChi = _cluster_by_isa(X[:, :m])
+            _, minChi = _cluster_by_isa(self.X[:, :m])
             minChi_list.append(minChi)
             
         return minChi_list
         
         
     # G-PCCA coarse-graining   
-    def optimize(self, m):
+    def optimize(self, m, full_output=False):
+        
+        n = np.shape(self.P)[0]
         
         # extract m_min, m_max, if given, else take single m
         if isinstance(m, dict):
@@ -1247,19 +1048,73 @@ class GPCCA(object):
             m_list = [m_min, m_max]
         elif isinstance(m, int):
             m_list = [m]
-        
-        if ( (self.X is not None) and (self.R is not None) ):
-            Rdim1, Rdim2 = self.R.shape
-            if (Rdim1 == Rdim2 >= max(m_list)):
-                self._chi, self._rot_matrix, self._crispness, _, _ = gpcca(self.P, self.eta, m, X=self.X, R=self.R)
-            else:
-                self._chi, self._rot_matrix, self._crispness, self.X, self.R = gpcca(self.P, self.eta, m)
-        else:
-            self._chi, self._rot_matrix, self._crispness, self.X, self.R = gpcca(self.P, self.eta, m)
             
-        self._m_opt = np.shape(self._rot_matrix)[0]
+        # validate input
+        if (max(m_list) > n):
+            raise ValueError("Number of macrostates m = " + str(max(m_list)) + " exceeds number "
+                             "of states of the transition matrix n = " + str(n) + ".")
+        if min(m_list) in [0,1]:
+            raise ValueError("There is no point in clustering into", str(m), "clusters!")
+            
+        # test connectivity
+        components = connected_sets(self.P)
+        n_components = len(components)
+        # Store components as closed (with positive equilibrium distribution)
+        # or as transition states (with vanishing equilibrium distribution).
+        closed_components = []
+        for i in range(n_components):
+            component = components[i]
+            rest = list(set(range(n)) - set(component))
+            # is component closed?
+            if (np.sum(P[component, :][:, rest]) == 0):
+                closed_components.append(component)
+        n_closed_components = len(closed_components)
+        
+        # Calculate Schur matrix R and Schur vector matrix X, if not adequately given.
+        _do_schur_helper(max(m_list))
+        
+        # Initialize lists to collect results.
+        chi_list = []
+        rot_matrix_list = []
+        crispness_list = []
+        # Iterate over m
+        for m in range(min(m_list), max(m_list) + 1):
+            if not (self.method == 'krylov'):
+                # Reduce R according to m.
+                Rm = self.R[:m, :m]
+                if m - 1 not in _find_twoblocks(Rm):
+                    warnings.warn("Coarse-graining with " + str(m) + " states cuts through "
+                                  + "a block of complex conjugate eigenvalues in the Schur "
+                                  + "form. The result will be of questionable meaning. "
+                                  + "Please increase/decrease number of states by one.")
+            ## Reduce X according to m and make a work copy.
+            #Xm = np.copy(X[:, :m])
+            chi, rot_matrix, crispness = _gpcca_core(self.X[:, :m])
+            # check if we have at least m dominant sets. If less than m, we warn.
+            nmeta = np.count_nonzero(chi.sum(axis=0))
+            if (m > nmeta):
+                crispness_list.append(-crispness)
+                warnings.warn(str(m) + " macrostates requested, but transition matrix only has " 
+                              + str(nmeta) + " macrostates. Request less macrostates.")
+            # Check, if we have enough clusters to support the disconnected sets.
+            elif (m < n_closed_components):
+                crispness_list.append(-crispness)
+                warnings.warn("Number of metastable states m = " + str(m) + " is too small. "
+                              + "Transition matrix has " + str(n_closed_components) 
+                              + " disconnected components.")
+            else:
+                crispness_list.append(crispness)
+            chi_list.append(chi)
+            rot_matrix_list.append(rot_matrix)
+        
+        opt_idx = np.argmax(crispness_list)
+        self._m_opt = min(m_list) + opt_idx
+        chi = chi_list[opt_idx]
+        rot_matrix = rot_matrix_list[opt_idx]
+        crispness = crispness_list[opt_idx]
         self._X = self.X[:, :self._m_opt]
-        self._R = self.R[:self._m_opt, :self._m_opt]
+        if not (self.method == 'krylov'):
+            self._R = self.R[:self._m_opt, :self._m_opt]
 
         # stationary distribution
         from msmtools.analysis import stationary_distribution as _stationary_distribution
@@ -1276,7 +1131,11 @@ class GPCCA(object):
         # coarse-grain transition matrix 
         self._P_coarse = coarsegrain(self.P, self.eta, self._chi)
         
-        return self
+        if full_output:
+            return (self, chi, rot_matrix, crispness, X, R, chi_list, rot_matrix_list, crispness_list)
+        else:
+            return (self, chi, rot_matrix, crispness, X, R)
+        
 
     @property
     def transition_matrix(self):
