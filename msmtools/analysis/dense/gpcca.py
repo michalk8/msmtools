@@ -113,7 +113,7 @@ def _gram_schmidt_mod(X, eta):
     # become the unit vector 1!).
     X[:, 0] = np.sqrt(eta)
     # Raise, if the subspace changed! TODO: Mb test rank instead?
-    if not ( subspace_angles(X, Xc)[0] < 1e8 * eps ): 
+    if not np.all(np.allclose(subspace_angles(X, Xc), 1e-8*eps, atol=1e-8, rtol=1e-5)): 
         raise ValueError("The subspace of Q derived by shifting a non-constant first (Schur)vector "
                          "to the right and setting the first (Schur) vector equal sqrt(eta) doesn't "
                          "match the subspace of the original Q!")
@@ -128,11 +128,11 @@ def _gram_schmidt_mod(X, eta):
         Q[:,j] = np.true_divide(v, R[j,j])
 
     # Raise, if the subspace changed! TODO: Mb test rank instead?
-    if not ( subspace_angles(Q, Xc)[0] < 1e8 * eps ):
+    if not np.all(np.allclose(subspace_angles(Q, Xc), 1e-8*eps, atol=1e-8, rtol=1e-5)):
         raise ValueError("The subspace of Q derived by eta-orthogonalization doesn't match the "
                          + "subspace of the original Q!")
     # Raise, if the (Schur)vectors aren't orthogonal!
-    if not np.allclose(Q.conj().T.dot(Q), np.eye(Q.shape[1]), rtol=1e6*eps, atol=1e6*eps):
+    if not np.allclose(Q.conj().T.dot(Q), np.eye(Q.shape[1]), 1e-8*eps, atol=1e-8, rtol=1e-5):
         raise ValueError("(Schur)vectors appear to not be orthogonal!")
     
     return Q
