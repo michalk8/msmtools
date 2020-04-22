@@ -974,7 +974,7 @@ class GPCCA(object):
     from msmtools.analysis import is_transition_matrix
     from msmtools.estimation import connected_sets
 
-    def __init__(self, P, eta):
+    def __init__(self, P, eta, z, method):
         if issparse(P):
             warnings.warn("G-PCCA is only implemented for dense matrices, "
                           + "converting sparse transition matrix to dense ndarray.")
