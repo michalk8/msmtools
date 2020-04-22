@@ -1,8 +1,12 @@
 import numpy as np
-from scipy.linalg import schur
+from scipy.linalg import schur, subspace_angles
 from msmtools.util.sort_real_schur import sort_real_schur
 from numpy.linalg import matrix_rank
 import warnings
+
+# Machine double floating precision:
+eps = np.finfo(np.float64).eps
+
 
 def top_eigenvalues(P, m, z='LM'):
     r"""
@@ -101,7 +105,7 @@ def top_eigenvalues(P, m, z='LM'):
     return (top_eigenvals, block_split)
 
 
-def smallest_eigenvalue(P, z='LM'):
+def smallest_eigenvalue(P, z='SM'):
     r"""
     Find the smallest eigenvalue according to an selectable criterion.
     
@@ -168,6 +172,12 @@ def sorted_scipy_schur(P, m, z='LM'):
         'LR': the m eigenvalues with the largest real part are sorted up.
         
     """
+    n = np.shape(P)[0]
+
+    if m == n:
+        raise ValueError("Can't sort the whole Schur form with Scipy-Schur! "
+                         + "Use one of the other methods instead.")
+
     # Calculate the top m+1 eigenvalues and secure that you
     # don't separate conjugate eigenvalues (corresponding to 2x2-block in R),
     # if you take the dominant m eigenvalues to cluster the data.
@@ -181,12 +191,12 @@ def sorted_scipy_schur(P, m, z='LM'):
     #eigenval_in = top_eigenvals[m-1]
     #eigenval_out = top_eigenvals[m]
     # Get the smallest eigenvalue.
-    smallest_eigenval = smallest_eigenvalue(P, z=z)
         
     if z == 'LM':
         # Determine the cutoff for sorting in schur().
         #cutoff = (np.abs(eigenval_in) + np.abs(eigenval_out)) / 2.0 
         cutoff = np.abs(top_eigenvals[m-1]) - 0.2
+        smallest_eigenval = smallest_eigenvalue(P, z='SM')
         if cutoff < smallest_eigenval:
             cutoff = smallest_eigenval
             
@@ -195,6 +205,7 @@ def sorted_scipy_schur(P, m, z='LM'):
         # Determine the cutoff for sorting in schur().
         #cutoff = (np.real(eigenval_in) + np.real(eigenval_out)) / 2.0 
         cutoff = np.real(top_eigenvals[m-1]) - 0.2
+        smallest_eigenval = smallest_eigenvalue(P, z='SR')
         if cutoff < smallest_eigenval:
             cutoff = smallest_eigenval
 
@@ -209,6 +220,30 @@ def sorted_scipy_schur(P, m, z='LM'):
     dummy = np.concatenate((np.dot(P, Q), np.dot(Q, R)), axis=1)
     if not ( ( matrix_rank(dummy) - matrix_rank(np.dot(P, Q) ) ) == 0 ):
         raise ValueError("X doesn't span a invariant subspace of P!")
+
+    dummy = np.dot(P, Q)
+    dummy1 = np.dot(Q, R)
+    dummy2 = np.concatenate((dummy, dummy1), axis=1)
+    dummy3 = subspace_angles(dummy, dummy1)
+    test1 = ( ( matrix_rank(dummy2) - matrix_rank(dummy) ) == 0 )
+    test2 = np.all(np.allclose(dummy3, 1e-8*eps, atol=1e-8, rtol=1e-5))
+    if not ( test1 or test2):
+        warnings.warn("Sorted Scipy-Schur didn't return the invariant subspace associated"
+                      + "with the top m eigenvalues, since P*Q and Q*L don't "
+                      + "span the same subspace (L is a diagonal matrix with the "
+                      + "sorted top eigenvalues on the diagonal).")
+    elif not test1:
+        warnings.warn("According to numpy.linalg.matrix_rank() sorted Scipy-Schur didn't "
+                      + "return the invariant subspace associated with the top m "
+                      + " eigenvalues, since (P*Q|Q*L) (horizontally stacked) and P*Q don't "
+                      + "have the same rank (L is a diagonal matrix with the "
+                      + "sorted top eigenvalues on the diagonal).")
+    elif not test2:
+        warnings.warn("According to scipy.linalg.subspace_angles() sorted Scipy-Schur didn't "
+                      + "return the invariant subspace associated with the top m eigenvalues, "
+                      + "since the subspace angles between the column spaces of P*Q and Q*L"
+                      + "aren't near zero (L is a diagonal matrix with the "
+                      + "sorted top eigenvalues on the diagonal).")
     
     return (R, Q)
 
@@ -342,12 +377,34 @@ def sorted_krylov_schur(P, m, z='LM'):
     top_eigenvals = np.asarray(top_eigenvals)
     top_eigenvals_error = np.asarray(top_eigenvals_error)
     
-    dummy = np.concatenate((np.dot(P, Q), np.dot(Q, np.diag(top_eigenvals[:m]))), axis=1)
-    if not ( ( matrix_rank(dummy) - matrix_rank(np.dot(P, Q)) ) == 0 ):
-        warnings.warn("Krylov Schur didn't return the invariant subspace associated with "
-                      + "the top m eigenvalues, since P*Q and Q*L don't "
+    dummy = np.dot(P, Q)
+    dummy1 = np.dot(Q, np.diag(top_eigenvals[:m]))
+    dummy2 = np.concatenate((dummy, dummy1), axis=1)
+    dummy3 = subspace_angles(dummy, dummy1)
+    test1 = ( ( matrix_rank(dummy2) - matrix_rank(dummy) ) == 0 )
+    test2 = np.all(np.allclose(dummy3, 1e-8*eps, atol=1e-8, rtol=1e-5))
+    test3 = (dummy3.shape[0] == m)
+    if not ( test1 or test2 or test3 ):
+        warnings.warn("Krylov-Schur didn't return the invariant subspace associated"
+                      + "with the top m eigenvalues, since P*Q and Q*L don't "
                       + "span the same subspace (L is a diagonal matrix with the "
                       + "sorted top eigenvalues on the diagonal).")
+    elif not test1:
+        warnings.warn("According to numpy.linalg.matrix_rank() Krylov-Schur didn't "
+                      + "return the invariant subspace associated with the top m "
+                      + " eigenvalues, since (P*Q|Q*L) (horizontally stacked) and P*Q don't "
+                      + "have the same rank (L is a diagonal matrix with the "
+                      + "sorted top eigenvalues on the diagonal).")
+    elif not test2:
+        warnings.warn("According to scipy.linalg.subspace_angles() Krylov-Schur didn't "
+                      + "return the invariant subspace associated with the top m eigenvalues, "
+                      + "since the subspace angles between the column spaces of P*Q and Q*L"
+                      + "aren't near zero (L is a diagonal matrix with the "
+                      + "sorted top eigenvalues on the diagonal).")
+    elif not test3:
+        warnings.warn("According to scipy.linalg.subspace_angles() the dimension of the "
+                      + "column space of P*Q and/or Q*L is not equal to m (L is a diagonal "
+                      + "matrix with the sorted top eigenvalues on the diagonal).")
     
     return (Q, top_eigenvals, top_eigenvals_error)
     
