@@ -1200,40 +1200,39 @@ class GPCCA(object):
             raise ValueError("There is no point in clustering into", str(m), "clusters!")
             
         if self.method == 'krylov':
-            
+            if (self.X is not None):
+                Xdim1, Xdim2 = self.X.shape
+                if not (Xdim1 == n):
+                    raise ValueError("The first dimension of X is " + str(Xdim1) + ". This doesn't match "
+                                     + "with the dimension of P (" + str(n) + "," + str(n) + ")!")
+                if not (Xdim2 >= m_max):
+                    self.X = _do_schur(self.P, self.eta, m_max, self.z, self.method)
+            else:
+                self.X = _do_schur(self.P, self.eta, m_max, self.z, self.method)
         else:
-        if ( (self.X is not None) and (self.R is not None) ):
-            Xdim1, Xdim2 = self.X.shape
-            Rdim1, Rdim2 = self.R.shape
-            if not (Xdim1 == n):
-                raise ValueError("The first dimension of X is " + str(Xdim1) + ". This doesn't match "
-                                 + "with the dimension of P (" + str(n) + "," + str(n) + ")!")
-            if not (Rdim1 == Rdim2):
-                raise ValueError("The Schur form R is not quadratic!")
-            if not (Xdim2 == Rdim1):
-                raise ValueError("The second dimension of X is " + str(Xdim2) + ". This doesn't match "
-                                 + "with the dimensions of R (" + str(Rdim1) + "," + str(Rdim2) + ")!")
-            if not (Rdim2 >= m_max):
+            if ( (self.X is not None) and (self.R is not None) ):
+                Xdim1, Xdim2 = self.X.shape
+                Rdim1, Rdim2 = self.R.shape
+                if not (Xdim1 == n):
+                    raise ValueError("The first dimension of X is " + str(Xdim1) + ". This doesn't match "
+                                     + "with the dimension of P (" + str(n) + "," + str(n) + ")!")
+                if not (Rdim1 == Rdim2):
+                    raise ValueError("The Schur form R is not quadratic!")
+                if not (Xdim2 == Rdim1):
+                    raise ValueError("The second dimension of X is " + str(Xdim2) + ". This doesn't match "
+                                     + "with the dimensions of R (" + str(Rdim1) + "," + str(Rdim2) + ")!")
+                if not (Rdim2 >= m_max):
+                    self.X, self.R = _do_schur(self.P, self.eta, m_max, self.z, self.method)
+            else:
                 self.X, self.R = _do_schur(self.P, self.eta, m_max, self.z, self.method)
-        else:
-            self.X, self.R = _do_schur(self.P, self.eta, m_max, self.z, self.method)
     
         minChi_list = []
         for m in range(m_min, m_max + 1):
             #Xm = np.copy(X[:, :m])
             _, minChi = _cluster_by_isa(X[:, :m])
             minChi_list.append(minChi)
-        
-        if ( (self.X is not None) and (self.R is not None) ):
-            Rdim1, Rdim2 = self.R.shape
-            if (Rdim1 == Rdim2 >= m_max):
-                _, _, minChi_list = use_minChi(self.P, self.eta, m_min, m_max, X=self.X, R=self.R)
-            else:
-                self.X, self.R, minChi_list = use_minChi(self.P, self.eta, m_min, m_max)
-        else:
-            self.X, self.R, minChi_list = use_minChi(self.P, self.eta, m_min, m_max)
             
-        return (self, minChi_list)
+        return minChi_list
         
         
     # G-PCCA coarse-graining   
