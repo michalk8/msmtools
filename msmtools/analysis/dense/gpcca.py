@@ -1156,7 +1156,11 @@ class GPCCA(object):
             self.z = z
         else:
             raise ValueError("You didn't give a valid sorting criterion z!")
-        self.method = method
+        if method in ['brandts', 'scipy', 'krylov']:
+            self.method = method
+        else:
+            raise ValueError("You didn't give a valid method to determine "
+                             + "the invariant subspace")
         
         
     def minChi(self, m_min, m_max):
