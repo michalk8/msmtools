@@ -267,7 +267,7 @@ def _do_schur(P, eta, m, z='LM', method='brandts'):
     if not np.allclose(X[:,0], 1.0, atol=1e-8, rtol=1e-5):
         raise ValueError("The first column X[:,0] of the Schur vector matrix isn't constantly equal 1!")
                   
-    if method == 'krylov'
+    if method == 'krylov':
         return X
     else:
         return (X, R)
