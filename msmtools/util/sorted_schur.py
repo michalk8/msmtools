@@ -11,7 +11,7 @@ eps = np.finfo(np.float64).eps
 def top_eigenvalues(P, m, z='LM'):
     r"""
     Sort `m+1` (if ``m < n``) or `m` (if ``m == n``) dominant eigenvalues 
-    up and check, if clustering into `m` clusters would split 
+    up and check (if ``m < n``), if clustering into `m` clusters would split 
     a complex conjugated pair of eigenvalues.
     
     Parameters
@@ -114,7 +114,7 @@ def smallest_eigenvalue(P, z='SM'):
     P : ndarray (n,n)
         
     z : string, (default='LM')
-        Criterion according ti which the smallest eigenvalue is selected.
+        Criterion according to which the smallest eigenvalue is selected.
         Options are:
         'SM': eigenvalue with the smallest magnitude.
         'SR': eigenvalue with the smallest real part.
@@ -339,10 +339,10 @@ def sorted_krylov_schur(P, m, z='LM'):
     # OPEN QUESTION: Are we sure that the returned basis vector are always real??
     # WE NEED REAL VECTORS! G-PCCA and PCCA only work with real vectors!!
     # We take the sequence of 1-D arrays and stack them as columns to make a single 2-D array.
-    X = np.column_stack([x.array for x in E.getInvariantSubspace()])
+    Subspace = np.column_stack([x.array for x in E.getInvariantSubspace()])
     
     # Raise, if X contains complex values!
-    if not np.all(np.isreal(X)):
+    if not np.all(np.isreal(Subspace)):
         raise TypeError("The orthonormal basis of the subspace returned by Krylov-Schur is not real!", 
                         "G-PCCA needs real basis vectors to work.")
     
@@ -355,7 +355,7 @@ def sorted_krylov_schur(P, m, z='LM'):
 #                       + "is raised later, when testing, if the remaining subspace Q[:,:m] is an "
 #                       + "invariant subspace associated with the sorted top m eigenvalues.")
     # Cut off, if too large.
-    Q = X[:, :m]
+    Q = Subspace[:, :m]
     
     # Gets the number of converged eigenpairs. 
     nconv = E.getConverged()
@@ -441,8 +441,8 @@ def sorted_schur(P, m, z='LM', method='brandts'):
          associated with the `m` dominant eigenvalues of `P` 
          using the Krylov-Schur method as implemented in SLEPc.
         'scipy': Perform a full Schur decomposition of `P` while
-         sorting up `m` dominant eigenvalues (and associated 
-         Schur vectors) at the same time.
+         sorting up `m` (`m` < `n`) dominant eigenvalues 
+         (and associated Schur vectors) at the same time.
         
     """
     if method == 'brandts':
