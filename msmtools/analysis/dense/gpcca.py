@@ -1036,7 +1036,98 @@ class GPCCA(object):
         
     # G-PCCA coarse-graining   
     def optimize(self, m, full_output=False):
+        r"""
+        Full G-PCCA [1]_ spectral clustering method with optimized memberships and the option
+        to optimize the number of clusters (macrostates) `m` as well.
+
+        If a single integer `m` is given, the method clusters the dominant `m` Schur vectors
+        of the transition matrix `P`. The algorithm generates a fuzzy clustering such that the
+        resulting membership functions `chi` are as crisp (characteristic) as possible given `m`.
+    
+        Instead of a single number of clusters `m`, a dict `m` containing a minimum and a maximum
+        number of clusters can be given. This results in repeated execution of the G-PCCA
+        core algorithm for :math:`m \in [m_{min},m_{max}]`. Among the resulting clusterings
+        the sharpest/crispest one (with maximal `crispness`) will be selected.
+
+        Parameters
+        ----------
+        m : int or dict
+            If int: number of clusters to group into.
+            If dict: minmal and maximal number of clusters `m_min` and `m_max` given as
+            a dict `{'m_min': int, 'm_max': int}`.
         
+        full_output : boolean, (default=False)
+            If False, only the optimal results `chi`, `rot_matrix`, `crispness` and the
+            matrices `X`, `R` will be returned.
+            If True, the optimal results `chi`, `rot_matrix`, `crispness`, the matrices `X`, `R`
+            and lists containing results for all :math:`m \in [m_{min},m_{max}]` will be returned.
+
+        Returns
+        -------
+        chi : ndarray (n,m)
+            A matrix containing the membership (or probability) of each state
+            (to be assigned) to each cluster. The rows sum up to 1.
+        
+        rot_matrix : ndarray (m,m)
+            Optimized rotation matrix that rotates the dominant Schur vectors 
+            to yield the G-PCCA memberships, i.e., ``chi = X * rot_matrix``.
+        
+        X : ndarray (n,m)
+            Matrix with `m` sorted Schur vectors in the columns.
+            The constant Schur vector is in the first column.
+        
+        R : ndarray (m,m)
+            Sorted real (partial) Schur matrix `R` of `P` such that
+            :math:`\tilde{P} Q = Q R` with the sorted (partial) matrix 
+            of Schur vectors :math:`Q` holds.
+            Only returned, if the chosen method to determine the 
+            invariant subspace of `P` is not the Krylov-Schur method.
+        
+        crispness : float (double)
+            The crispness :math:`\xi \in [0,1]` quantifies the optimality 
+            of the solution (higher is better). It characterizes how crisp 
+            (sharp) the decomposition of the state space into `m` clusters is.
+            It is given via (Eq. 17 from [2]_):
+        
+            ..math: \xi = (m - f_{opt}) / m = \mathtt{trace}(S) / m 
+                        = \mathtt{trace}(\tilde{D} \chi^T D \chi) / m -> \mathtt{max}
+        
+            with :math:`D` being a diagonal matrix with `eta` on its diagonal.
+        
+        chi_list : list of ndarrays
+            List of (n,m) membership matrices for all :math:`m \in [m_{min},m_{max}]`.
+            Only returned, if `full_output=True`.
+        
+        rot_matrix_list : list of ndarrays
+            List of (m,m) rotation matrices for all :math:`m \in [m_{min},m_{max}]`.
+            Only returned, if `full_output=True`.
+        
+        crispness_list : list of floats (double)
+            List of crispness indicators for all :math:`m \in [m_{min},m_{max}]`.
+            If the membership matrix for a `m` supports less than `m` clusters,
+            the associated value in `crispness_list` will be `-crispness`
+            instead of `crispness`.
+            Only returned, if `full_output=True`.
+        
+        References
+        ----------
+        .. [1] Reuter, B., Weber, M., Fackeldey, K., Röblitz, S., & Garcia, M. E. (2018). Generalized
+               Markov State Modeling Method for Nonequilibrium Biomolecular Dynamics: Exemplified on
+               Amyloid β Conformational Dynamics Driven by an Oscillating Electric Field. Journal of
+               Chemical Theory and Computation, 14(7), 3579–3594. https://doi.org/10.1021/acs.jctc.8b00079
+
+        .. [2] S. Roeblitz and M. Weber, Fuzzy spectral clustering by PCCA+:
+               application to Markov state models and data classification.
+               Adv Data Anal Classif 7, 147-179 (2013).
+               https://doi.org/10.1007/s11634-013-0134-6
+
+        Copyright (c) 2020 Bernhard Reuter, Susanna Roeblitz and Marcus Weber, 
+        Zuse Institute Berlin, Takustrasse 7, 14195 Berlin
+        ----------------------------------------------
+        If you use this code or parts of it, cite [1]_.
+        ----------------------------------------------
+    
+        """
         n = np.shape(self.P)[0]
         
         # extract m_min, m_max, if given, else take single m
