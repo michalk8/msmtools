@@ -33,8 +33,6 @@ import warnings
 import numpy as np
 from scipy.sparse import issparse
 import math
-from msmtools.analysis import is_transition_matrix
-from msmtools.estimation import connected_sets
 
 # Machine double floating precision:
 eps = np.finfo(np.float64).eps
@@ -973,6 +971,8 @@ class GPCCA(object):
     ----------------------------------------------
 
     """
+    from msmtools.analysis import is_transition_matrix
+    from msmtools.estimation import connected_sets
 
     def __init__(self, P, eta):
         if issparse(P):
