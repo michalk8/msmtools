@@ -196,7 +196,7 @@ def sorted_scipy_schur(P, m, z='LM'):
         # Determine the cutoff for sorting in schur().
         #cutoff = (np.abs(eigenval_in) + np.abs(eigenval_out)) / 2.0 
         cutoff = np.abs(top_eigenvals[m-1]) - 0.2
-        smallest_eigenval = smallest_eigenvalue(P, z='SM')
+        smallest_eigenval = np.abs(smallest_eigenvalue(P, z='SM'))
         if cutoff < smallest_eigenval:
             cutoff = smallest_eigenval
             
@@ -205,7 +205,7 @@ def sorted_scipy_schur(P, m, z='LM'):
         # Determine the cutoff for sorting in schur().
         #cutoff = (np.real(eigenval_in) + np.real(eigenval_out)) / 2.0 
         cutoff = np.real(top_eigenvals[m-1]) - 0.2
-        smallest_eigenval = smallest_eigenvalue(P, z='SR')
+        smallest_eigenval = np.real(smallest_eigenvalue(P, z='SR'))
         if cutoff < smallest_eigenval:
             cutoff = smallest_eigenval
 
@@ -228,10 +228,10 @@ def sorted_scipy_schur(P, m, z='LM'):
     test1 = ( ( matrix_rank(dummy2) - matrix_rank(dummy) ) == 0 )
     test2 = np.all(np.allclose(dummy3, 1e-8*eps, atol=1e-8, rtol=1e-5))
     if not ( test1 or test2):
-        warnings.warn("Sorted Scipy-Schur didn't return the invariant subspace associated"
-                      + "with the top m eigenvalues, since P*Q and Q*L don't "
-                      + "span the same subspace (L is a diagonal matrix with the "
-                      + "sorted top eigenvalues on the diagonal).")
+        raise ValueError("Sorted Scipy-Schur didn't return the invariant subspace associated"
+                         + "with the top m eigenvalues, since P*Q and Q*L don't "
+                         + "span the same subspace (L is a diagonal matrix with the "
+                         + "sorted top eigenvalues on the diagonal).")
     elif not test1:
         warnings.warn("According to numpy.linalg.matrix_rank() sorted Scipy-Schur didn't "
                       + "return the invariant subspace associated with the top m "
@@ -385,10 +385,10 @@ def sorted_krylov_schur(P, m, z='LM'):
     test2 = np.all(np.allclose(dummy3, 1e-8*eps, atol=1e-8, rtol=1e-5))
     test3 = (dummy3.shape[0] == m)
     if not ( test1 or test2 or test3 ):
-        warnings.warn("Krylov-Schur didn't return the invariant subspace associated"
-                      + "with the top m eigenvalues, since P*Q and Q*L don't "
-                      + "span the same subspace (L is a diagonal matrix with the "
-                      + "sorted top eigenvalues on the diagonal).")
+        raise ValueError("Krylov-Schur didn't return the invariant subspace associated"
+                         + "with the top m eigenvalues, since P*Q and Q*L don't "
+                         + "span the same subspace (L is a diagonal matrix with the "
+                         + "sorted top eigenvalues on the diagonal).")
     elif not test1:
         warnings.warn("According to numpy.linalg.matrix_rank() Krylov-Schur didn't "
                       + "return the invariant subspace associated with the top m "
