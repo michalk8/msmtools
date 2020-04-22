@@ -1441,24 +1441,83 @@ def relaxation(T, p0, obs, times=(1), k=None, ncv=None):
 # PCCA
 # ========================
 
-def _pcca_object(T, m, eta=None, use_gpcca=False):
+def _pcca_object(T, m, use_gpcca=False, eta=None, z='LM', method='brandts'):
     r"""
     Constructs the pcca object from a dense or sparse transition matrix.
 
     Parameters
     ----------
-    T : (n, n) ndarray or scipy.sparse matrix
-        Transition matrix
+    T : ndarray (n,n)
+        Transition matrix (row-stochastic).
+        
     m : int
-        Number of metastable sets
-    eta : ndarray (n,), (default=None)
-        Only needed, if `use_gpcca=True`.
-        Input (initial) distribution of states.
-        In case of a reversible transition matrix, provide the stationary distribution `pi` here.
+        Number of clusters to group into.
+        
     use_gpcca : boolean, (default=False)
         If `False` standard PCCA+ algorithm [1]_ for reversible transition matrices is used.
         If `True` the Generalized PCCA+ (G-PCCA) algorithm [2]_ for arbitrary 
         (reversible and non-reversible) transition matrices is used.
+        
+    eta : ndarray (n,) 
+        Only needed, if `use_gpcca=True`.
+        Input probability distribution of the (micro)states.
+        In theory this can be an arbitray distribution as long as it is 
+        a valid probability distribution (i.e., sums up to 1).
+        A neutral and valid choice would be the uniform distribution.
+        In case of a reversible transition matrix, 
+        use the stationary probability distribution ``pi`` here.
+        
+    z : string, (default='LM')
+        Only needed, if `use_gpcca=True`.
+        Specifies which portion of the eigenvalue spectrum of `P` 
+        is to be sought. The invariant subspace of `P` that is  
+        returned will be associated with this part of the spectrum.
+        Options are:
+        'LM': Largest magnitude (default).
+        'LR': Largest real parts.
+        
+    method : string, (default='brandts')
+        Only needed, if `use_gpcca=True`.
+        Which method to use to determine the invariant subspace.
+        Options are:
+        'brandts': Perform a full Schur decomposition of `P`
+         utilizing scipy.schur (but without the sorting option)
+         and sort the returned Schur form R and Schur vector 
+         matrix Q afterwards using a routine published by Brandts.
+         This is well tested und thus the default method, 
+         although it is also the slowest choice.
+         'scipy': Perform a full Schur decomposition of `P` 
+         while sorting up `m` (`m` < `n`) dominant eigenvalues 
+         (and associated Schur vectors) at the same time.
+         This will be faster than `brandts`, if `P` is large 
+         (n > 1000) and you sort a large part of the spectrum,
+         because your number of clusters `m` is large (>20).
+         This is still experimental, so use with CAUTION!
+        'krylov': Calculate an orthonormal basis of the subspace 
+         associated with the `m` dominant eigenvalues of `P` 
+         using the Krylov-Schur method as implemented in SLEPc.
+         This is the fastest choice and especially suitable for 
+         very large `P`, but it is still experimental.
+         Use with CAUTION! 
+         ----------------------------------------------------
+         To use this method you need to have petsc, petsc4py, 
+         selpc, and slepc4py installed. For optimal performance 
+         it is highly recommended that you also have mpi (at least 
+         version 2) and mpi4py installed. The installation can be 
+         a little tricky sometimes, but the following approach was 
+         successfull on Ubuntu 18.04:
+         ``sudo apt-get update & sudo apt-get upgrade``
+         ``sudo apt-get install libopenmpi-dev``
+         ``pip install --user mpi4py``
+         ``pip install --user petsc``
+         ``pip install --user petsc4py``
+         ``pip install --user slepc slepc4py``.
+         During installation of petsc, petsc4py, selpc, and 
+         slepc4py the following error might appear several times 
+         `` ERROR: Failed building wheel for [package name here]``,
+         but this doesn't matter if the installer finally tells you
+         ``Successfully installed [package name here]``.
+         ------------------------------------------------------
 
     Returns
     -------
@@ -1485,7 +1544,10 @@ def _pcca_object(T, m, eta=None, use_gpcca=False):
     if not use_gpcca:
         return dense.pcca.PCCA(T, m)
     else:
-        return dense.gpcca.GPCCA(T, eta, m)
+        if eta == None:
+            eta = np.ones(np.shape(T)[0])
+            eta = eta / np.sum(eta)
+        return dense.gpcca.GPCCA(T, eta, m, z, method)
 
 
 def pcca_memberships(T, m, eta=None, use_gpcca=False):
@@ -1531,9 +1593,9 @@ def pcca_memberships(T, m, eta=None, use_gpcca=False):
     if not use_gpcca:
         return _pcca_object(T, m).memberships
     else:
-        return _pcca_object(P, m, eta, True).memberships
-
-
+        return _pcca_object(T, m, use_gpcca=True, eta=eta).memberships
+    
+    
 def pcca_sets(T, m, eta=None, use_gpcca=False):
     r""" Computes the metastable sets given transition matrix T using PCCA+ [1]_ 
     or the dominant (incl. metastable) sets given transition matrix T using G-PCCA [2]_.
@@ -1570,7 +1632,7 @@ def pcca_sets(T, m, eta=None, use_gpcca=False):
     if not use_gpcca:
         return _pcca_object(T, m).metastable_sets
     else:
-        return _pcca_object(P, m, eta, True).metastable_sets
+        return _pcca_object(T, m, use_gpcca=True, eta=eta).metastable_sets
 
 
 def pcca_assignments(T, m, eta=None, use_gpcca=False):
@@ -1609,7 +1671,7 @@ def pcca_assignments(T, m, eta=None, use_gpcca=False):
     if not use_gpcca:
         return _pcca_object(T, m).metastable_assignment
     else:
-        return _pcca_object(P, m, eta, True).metastable_assignment
+        return _pcca_object(T, m, use_gpcca=True, eta=eta).metastable_assignment
 
      
 def pcca_distributions(T, m):
@@ -1688,7 +1750,6 @@ def coarsegrain(P, m, eta=None, use_gpcca=False):
         Coarse-grained transition matrix
     pi_c : ndarray( (m) )
         Equilibrium probability vector of the coarse-grained transition matrix.
-        Only returned, if ``use_gpcca=False``.
     eta_c : ndarray( (m) )
         Coarse-grained input (initial) distribution of states.
         Only returned, if ``use_gpcca=True``.
@@ -1722,9 +1783,10 @@ def coarsegrain(P, m, eta=None, use_gpcca=False):
         return (P_c, pi_c, p_out)
         
     else:
-        P_c = _pcca_object(P, m, eta, True).coarse_grained_transition_matrix
-        eta_c = _pcca_object(P, m, eta, True).coarse_grained_input_distribution
-        return (P_c, eta_c)
+        P_c = _pcca_object(P, m, use_gpcca=True, eta=eta).coarse_grained_transition_matrix
+        pi_c = _pcca_object(P, m, use_gpcca=True, eta=eta).coarse_grained_stationary_probability
+        eta_c = _pcca_object(P, m, use_gpcca=True, eta=eta).coarse_grained_input_distribution
+        return (P_c, pi_c, eta_c)
        
 
 ################################################################################
