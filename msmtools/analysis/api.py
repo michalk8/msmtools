@@ -7,10 +7,11 @@
 # Zuse Institute Berlin, Takustrasse 7, 14195 Berlin
 # If you use G-PCCA or parts of it, cite the following reference:
 # ---------------------------------------------------------------
-# Reuter, B., Weber, M., Fackeldey, K., Röblitz, S., & Garcia, M. E. (2018). Generalized
-# Markov State Modeling Method for Nonequilibrium Biomolecular Dynamics: Exemplified on
-# Amyloid β Conformational Dynamics Driven by an Oscillating Electric Field. Journal of
-# Chemical Theory and Computation, 14(7), 3579–3594. https://doi.org/10.1021/acs.jctc.8b00079
+# Reuter, B., Weber, M., Fackeldey, K., Röblitz, S., & Garcia, M. E. (2018). 
+# Generalized Markov State Modeling Method for Nonequilibrium Biomolecular 
+# Dynamics: Exemplified on Amyloid β Conformational Dynamics Driven by an 
+# Oscillating Electric Field. Journal of Chemical Theory and Computation, 
+# 14(7), 3579–3594. https://doi.org/10.1021/acs.jctc.8b00079
 # ----------------------------------------------------------------
 # MSMTools is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
