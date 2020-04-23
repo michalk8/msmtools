@@ -1333,6 +1333,8 @@ class GPCCA(object):
     
     @property
     def schur_matrix(self):
+        if self._R == None:
+            print("The Schur form R is not defined, if you chose Krylov-Schur as method.")
         return self._R
     
     @property
