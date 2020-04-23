@@ -101,7 +101,7 @@ def _gram_schmidt_mod(X, eta):
     for i in range(m):
         vsum = np.sum(X[:,i])
         dummy = ( np.ones(X[:,i].shape) * (vsum / n) )
-        if np.allclose(X[:,i], dummy, rtol=1e-8, atol=1e-5 ):  
+        if np.allclose(X[:,i], dummy, rtol=1e-6, atol=1e-5 ):  
             max_i = i
         
     # Shift non-constant first (Schur) vector to the right.
@@ -239,32 +239,33 @@ def _do_schur(P, eta, m, z='LM', method='brandts'):
     Q = Q[:, 0:m]
     
     # Orthonormalize the sorted Schur vectors Q via modified Gram-Schmidt-orthonormalization,
-#    # if the (Schur)vectors aren't orthogonal!
-#    if not np.allclose(Q.T.dot(Q), np.eye(Q.shape[1]), rtol=1e6*eps, atol=1e6*eps):
-#        print("Info: The Schur vectors aren't orthogonal so they are eta-orthonormalized.")
-    Q = _gram_schmidt_mod(Q, eta)
-    # Transform the orthonormalized Schur vectors of P_bar back 
-    # to orthonormalized Schur vectors X of P.
-    X = np.diag(1./np.sqrt(eta)).dot(Q)
-#    else:
-#        # Search for the constant (Schur) vector, if explicitly present.
-#        max_i = 0
-#        for i in range(m):
-#            vsum = np.sum(Q[:,i])
-#            dummy = ( np.ones(Q[:,i].shape) * (vsum / N1) )
-#            if np.allclose(Q[:,i], dummy, rtol=1e-6, atol=1e-5 ):  
-#                max_i = i
-#        # Shift non-constant first (Schur) vector to the right.
-#        Q[:,max_i] = Q[:, 0]
-#        # Transform the orthonormalized Schur vectors of P_bar back 
-#        # to orthonormalized Schur vectors X of P.
-#        X = np.diag(1./np.sqrt(eta)).dot(Q)
-#        # Set first (Schur) vector equal 1.
-#        X[:, 0] = 1.0
+    # if the (Schur)vectors aren't orthogonal!
+    if not np.allclose(Q.T.dot(Q), np.eye(Q.shape[1]), rtol=1e6*eps, atol=1e6*eps):
+        print("Info: The Schur vectors aren't orthogonal so they are eta-orthonormalized.")
+        Q = _gram_schmidt_mod(Q, eta)
+        # Transform the orthonormalized Schur vectors of P_bar back 
+        # to orthonormalized Schur vectors X of P.
+        X = np.diag(1./np.sqrt(eta)).dot(Q)
+    else:
+        # Search for the constant (Schur) vector, if explicitly present.
+        n, m = Q.shape
+        max_i = 0
+        for i in range(m):
+            vsum = np.sum(Q[:,i])
+            dummy = ( np.ones(Q[:,i].shape) * (vsum / n) )
+            if np.allclose(Q[:,i], dummy, rtol=1e-6, atol=1e-5 ):  
+                max_i = i   
+        # Shift non-constant first (Schur) vector to the right.
+        Q[:,max_i] = Q[:, 0]
+        # Transform the orthonormalized Schur vectors of P_bar back 
+        # to orthonormalized Schur vectors X of P.
+        X = np.diag(1./np.sqrt(eta)).dot(Q)
+        # Set first (Schur) vector equal 1.
+        X[:, 0] = 1.0
          
     if not X.shape[0] == N1:
-        raise ValueError("The number of rows n=%d of the Schur vector matrix X doesn't match those (n=%d) of P!" 
-                         % (X.shape[0], P.shape[0]))
+        raise ValueError("The number of rows n=%d of the Schur vector matrix X doesn't match "
+                         + "those (n=%d) of P!" % (X.shape[0], P.shape[0]))
     # Raise, if the (Schur)vectors aren't D-orthogonal (don't fullfill the orthogonality condition)!
     if not np.allclose(X.conj().T.dot(np.diag(eta)).dot(X), np.eye(X.shape[1]), atol=1e-8, rtol=1e-5):
         print(X.conj().T.dot(np.diag(eta)).dot(X))
@@ -1369,7 +1370,7 @@ class GPCCA(object):
     
     @property
     def schur_matrix(self):
-        if self._R == None:
+        if np.all(self._R == None):
             print("The Schur form R is not defined, if you chose Krylov-Schur as method.")
         return self._R
     
