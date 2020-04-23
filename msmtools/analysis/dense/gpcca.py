@@ -1277,7 +1277,9 @@ class GPCCA(object):
         self._rot_matrix = rot_matrix_list[opt_idx]
         self._crispness = crispness_list[opt_idx]
         self._X = self.X[:, :self._m_opt]
-        if not (self.method == 'krylov'):
+        if self.method == 'krylov':
+            self._R = None
+        else:
             self._R = self.R[:self._m_opt, :self._m_opt]
 
         # stationary distribution
