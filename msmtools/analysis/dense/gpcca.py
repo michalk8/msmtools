@@ -832,7 +832,7 @@ def gpcca_coarsegrain(P, eta, m, z='LM', method='brandts'):
     
     """                  
     #Matlab: Pc = pinv(chi'*diag(eta)*chi)*(chi'*diag(eta)*P*chi)
-    chi, _, _, _, _ = GPCCA(P, eta, z, method).optimize(m)
+    _, chi, _, _, _, _ = GPCCA(P, eta, z, method).optimize(m)
     W = np.linalg.pinv(np.dot(chi.T, np.diag(eta)).dot(chi))
     A = np.dot(chi.T, np.diag(eta)).dot(P).dot(chi)
     P_coarse = W.dot(A)
