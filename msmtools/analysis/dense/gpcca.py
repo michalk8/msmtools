@@ -6,10 +6,11 @@
 # --------------------------------------------------
 # If you use this code or parts of it, cite the following reference:
 # ------------------------------------------------------------------
-# Reuter, B., Weber, M., Fackeldey, K., Röblitz, S., & Garcia, M. E. (2018). Generalized
-# Markov State Modeling Method for Nonequilibrium Biomolecular Dynamics: Exemplified on
-# Amyloid β Conformational Dynamics Driven by an Oscillating Electric Field. Journal of
-# Chemical Theory and Computation, 14(7), 3579–3594. https://doi.org/10.1021/acs.jctc.8b00079
+# Reuter, B., Weber, M., Fackeldey, K., Röblitz, S., & Garcia, M. E. (2018). 
+# Generalized Markov State Modeling Method for Nonequilibrium Biomolecular 
+# Dynamics: Exemplified on Amyloid β Conformational Dynamics Driven by an 
+# Oscillating Electric Field. Journal of Chemical Theory and Computation, 
+# 14(7), 3579–3594. https://doi.org/10.1021/acs.jctc.8b00079
 # ----------------------------------------------------------------
 # MSMTools is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
@@ -24,11 +25,27 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-'''
-@author: Bernhard Reuter, Marcus Weber, Susanna Roeblitz
+r'''
+
+========================
+ GPCCA class and methods
+========================
+@author: Bernhard Reuter
 
 '''
 
+__docformat__ = "restructuredtext en"
+__authors__ = __author__ = "Bernhard Reuter"
+__copyright__ = "Copyright 2020, Bernhard Reuter, Susanna Roeblitz and Marcus Weber, Zuse Institute Berlin"
+__credits__ = ["Bernhard Reuter", "Marcus Weber", "Susanna Roeblitz"]
+
+__version__ = "1.0.0"
+__maintainer__ = "Bernhard Reuter"
+__email__ = "bernhard.reuter AT uni-tuebingen DOT de"
+
+#############################################################################
+
+#imports
 import warnings
 import numpy as np
 from scipy.sparse import issparse
@@ -622,10 +639,12 @@ def _cluster_by_isa(X):
            Adv Data Anal Classif 7, 147-179 (2013).
            https://doi.org/10.1007/s11634-013-0134-6
 
-    .. [2] Reuter, B., Weber, M., Fackeldey, K., Röblitz, S., & Garcia, M. E. (2018). Generalized
-           Markov State Modeling Method for Nonequilibrium Biomolecular Dynamics: Exemplified on
-           Amyloid β Conformational Dynamics Driven by an Oscillating Electric Field. Journal of
-           Chemical Theory and Computation, 14(7), 3579–3594. https://doi.org/10.1021/acs.jctc.8b00079
+    .. [2] Reuter, B., Weber, M., Fackeldey, K., Röblitz, S., Garcia, M. E. (2018). 
+           Generalized Markov State Modeling Method for Nonequilibrium 
+           Biomolecular Dynamics: Exemplified on Amyloid β Conformational  
+           Dynamics Driven by an Oscillating Electric Field. 
+           Journal of Chemical Theory and Computation, 14(7), 3579–3594. 
+           https://doi.org/10.1021/acs.jctc.8b00079
            
     """
     
@@ -676,10 +695,12 @@ def _gpcca_core(X):
         
     References
     ----------
-    .. [1] Reuter, B., Weber, M., Fackeldey, K., Röblitz, S., & Garcia, M. E. (2018). Generalized
-           Markov State Modeling Method for Nonequilibrium Biomolecular Dynamics: Exemplified on
-           Amyloid β Conformational Dynamics Driven by an Oscillating Electric Field. Journal of
-           Chemical Theory and Computation, 14(7), 3579–3594. https://doi.org/10.1021/acs.jctc.8b00079
+    .. [1] Reuter, B., Weber, M., Fackeldey, K., Röblitz, S., Garcia, M. E. (2018). 
+           Generalized Markov State Modeling Method for Nonequilibrium 
+           Biomolecular Dynamics: Exemplified on Amyloid β Conformational  
+           Dynamics Driven by an Oscillating Electric Field. 
+           Journal of Chemical Theory and Computation, 14(7), 3579–3594. 
+           https://doi.org/10.1021/acs.jctc.8b00079
 
     .. [2] S. Roeblitz and M. Weber, Fuzzy spectral clustering by PCCA+:
            application to Markov state models and data classification.
@@ -734,10 +755,12 @@ def coarsegrain(P, eta, chi):
 
     References
     ----------
-    .. [1] Reuter, B., Weber, M., Fackeldey, K., Röblitz, S., & Garcia, M. E. (2018). Generalized
-           Markov State Modeling Method for Nonequilibrium Biomolecular Dynamics: Exemplified on
-           Amyloid β Conformational Dynamics Driven by an Oscillating Electric Field. Journal of
-           Chemical Theory and Computation, 14(7), 3579–3594. https://doi.org/10.1021/acs.jctc.8b00079
+    .. [1] Reuter, B., Weber, M., Fackeldey, K., Röblitz, S., Garcia, M. E. (2018). 
+           Generalized Markov State Modeling Method for Nonequilibrium 
+           Biomolecular Dynamics: Exemplified on Amyloid β Conformational  
+           Dynamics Driven by an Oscillating Electric Field. 
+           Journal of Chemical Theory and Computation, 14(7), 3579–3594. 
+           https://doi.org/10.1021/acs.jctc.8b00079
         
     Copyright (c) 2020 Bernhard Reuter, Susanna Roeblitz and Marcus Weber, 
     Zuse Institute Berlin, Takustrasse 7, 14195 Berlin
@@ -820,10 +843,12 @@ def gpcca_coarsegrain(P, eta, m, z='LM', method='brandts'):
 
     References
     ----------
-    .. [1] Reuter, B., Weber, M., Fackeldey, K., Röblitz, S., & Garcia, M. E. (2018). Generalized
-           Markov State Modeling Method for Nonequilibrium Biomolecular Dynamics: Exemplified on
-           Amyloid β Conformational Dynamics Driven by an Oscillating Electric Field. Journal of
-           Chemical Theory and Computation, 14(7), 3579–3594. https://doi.org/10.1021/acs.jctc.8b00079
+    .. [1] Reuter, B., Weber, M., Fackeldey, K., Röblitz, S., Garcia, M. E. (2018). 
+           Generalized Markov State Modeling Method for Nonequilibrium 
+           Biomolecular Dynamics: Exemplified on Amyloid β Conformational  
+           Dynamics Driven by an Oscillating Electric Field. 
+           Journal of Chemical Theory and Computation, 14(7), 3579–3594. 
+           https://doi.org/10.1021/acs.jctc.8b00079
         
     Copyright (c) 2020 Bernhard Reuter, Susanna Roeblitz and Marcus Weber, 
     Zuse Institute Berlin, Takustrasse 7, 14195 Berlin
@@ -1020,10 +1045,12 @@ class GPCCA(object):
         
     References
     ----------
-    .. [1] Reuter, B., Weber, M., Fackeldey, K., Röblitz, S., & Garcia, M. E. (2018). Generalized
-           Markov State Modeling Method for Nonequilibrium Biomolecular Dynamics: Exemplified on
-           Amyloid β Conformational Dynamics Driven by an Oscillating Electric Field. Journal of
-           Chemical Theory and Computation, 14(7), 3579–3594. https://doi.org/10.1021/acs.jctc.8b00079
+    .. [1] Reuter, B., Weber, M., Fackeldey, K., Röblitz, S., Garcia, M. E. (2018). 
+           Generalized Markov State Modeling Method for Nonequilibrium 
+           Biomolecular Dynamics: Exemplified on Amyloid β Conformational  
+           Dynamics Driven by an Oscillating Electric Field. 
+           Journal of Chemical Theory and Computation, 14(7), 3579–3594. 
+           https://doi.org/10.1021/acs.jctc.8b00079
 
     Copyright (c) 2020 Bernhard Reuter, Susanna Roeblitz and Marcus Weber, 
     Zuse Institute Berlin, Takustrasse 7, 14195 Berlin
@@ -1116,10 +1143,12 @@ class GPCCA(object):
                application to Markov state models and data classification.
                Adv Data Anal Classif 7, 147-179 (2013).
                https://doi.org/10.1007/s11634-013-0134-6
-        .. [2] Reuter, B., Weber, M., Fackeldey, K., Röblitz, S., & Garcia, M. E. (2018). Generalized
-               Markov State Modeling Method for Nonequilibrium Biomolecular Dynamics: Exemplified on
-               Amyloid β Conformational Dynamics Driven by an Oscillating Electric Field. Journal of
-               Chemical Theory and Computation, 14(7), 3579–3594. https://doi.org/10.1021/acs.jctc.8b00079
+        .. [2] Reuter, B., Weber, M., Fackeldey, K., Röblitz, S., Garcia, M. E. (2018). 
+               Generalized Markov State Modeling Method for Nonequilibrium 
+               Biomolecular Dynamics: Exemplified on Amyloid β Conformational  
+               Dynamics Driven by an Oscillating Electric Field. 
+               Journal of Chemical Theory and Computation, 14(7), 3579–3594. 
+               https://doi.org/10.1021/acs.jctc.8b00079
         
         """
         n = np.shape(self.P)[0]
@@ -1219,10 +1248,12 @@ class GPCCA(object):
         
         References
         ----------
-        .. [1] Reuter, B., Weber, M., Fackeldey, K., Röblitz, S., & Garcia, M. E. (2018). Generalized
-               Markov State Modeling Method for Nonequilibrium Biomolecular Dynamics: Exemplified on
-               Amyloid β Conformational Dynamics Driven by an Oscillating Electric Field. Journal of
-               Chemical Theory and Computation, 14(7), 3579–3594. https://doi.org/10.1021/acs.jctc.8b00079
+        .. [1] Reuter, B., Weber, M., Fackeldey, K., Röblitz, S., Garcia, M. E. (2018). 
+               Generalized Markov State Modeling Method for Nonequilibrium 
+               Biomolecular Dynamics: Exemplified on Amyloid β Conformational  
+               Dynamics Driven by an Oscillating Electric Field. 
+               Journal of Chemical Theory and Computation, 14(7), 3579–3594. 
+               https://doi.org/10.1021/acs.jctc.8b00079
 
         .. [2] S. Roeblitz and M. Weber, Fuzzy spectral clustering by PCCA+:
                application to Markov state models and data classification.
