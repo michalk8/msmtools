@@ -101,7 +101,7 @@ def _gram_schmidt_mod(X, eta):
     for i in range(m):
         vsum = np.sum(X[:,i])
         dummy = ( np.ones(X[:,i].shape) * (vsum / n) )
-        if np.allclose(X[:,i], dummy, rtol=1e6*eps, atol=1e6*eps ):  
+        if np.allclose(X[:,i], dummy, rtol=1e-8, atol=1e-5 ):  
             max_i = i
         
     # Shift non-constant first (Schur) vector to the right.
@@ -111,10 +111,14 @@ def _gram_schmidt_mod(X, eta):
     # become the unit vector 1!).
     X[:, 0] = np.sqrt(eta)
     # Raise, if the subspace changed! TODO: Mb test rank instead?
-    if not np.all(np.allclose(subspace_angles(X, Xc), 1e-8*eps, atol=1e-8, rtol=1e-5)): 
+    dummy = subspace_angles(X, Xc)
+    if not np.allclose(dummy, 0.0, atol=1e-8, rtol=1e-5): 
+        print(Xc)
+        print(X)
         raise ValueError("The subspace of Q derived by shifting a non-constant first (Schur)vector "
                          "to the right and setting the first (Schur) vector equal sqrt(eta) doesn't "
-                         "match the subspace of the original Q!")
+                         "match the subspace of the original Q! The subspace angles are: " 
+                         + str(dummy) + " Number of clusters: " + str(m))
     
     # eta-orthonormalization
     for j in range(m):
@@ -126,11 +130,13 @@ def _gram_schmidt_mod(X, eta):
         Q[:,j] = np.true_divide(v, R[j,j])
 
     # Raise, if the subspace changed! TODO: Mb test rank instead?
-    if not np.all(np.allclose(subspace_angles(Q, Xc), 1e-8*eps, atol=1e-8, rtol=1e-5)):
+    dummy = subspace_angles(Q, Xc)
+    if not np.allclose(dummy, 0.0, atol=1e-8, rtol=1e-5):
         raise ValueError("The subspace of Q derived by eta-orthogonalization doesn't match the "
-                         + "subspace of the original Q!")
+                         + "subspace of the original Q! The subspace angles are: " + str(dummy)
+                         + " Number of clusters: " + str(m))
     # Raise, if the (Schur)vectors aren't orthogonal!
-    if not np.allclose(Q.conj().T.dot(Q), np.eye(Q.shape[1]), 1e-8*eps, atol=1e-8, rtol=1e-5):
+    if not np.allclose(Q.conj().T.dot(Q), np.eye(Q.shape[1]), atol=1e-8, rtol=1e-5):
         raise ValueError("(Schur)vectors appear to not be orthogonal!")
     
     return Q
@@ -217,9 +223,9 @@ def _do_schur(P, eta, m, z='LM', method='brandts'):
 
     # Make a Schur decomposition of P_bar and sort the Schur vectors (and form).
     if method == 'krylov':
-        Q = sorted_schur(P, m, z, method)
+        Q = sorted_schur(P_bar, m, z, method) #Pbar!!!
     else:
-        R, Q = sorted_schur(P, m, z, method)
+        R, Q = sorted_schur(P_bar, m, z, method) #Pbar!!!
         if m - 1 not in _find_twoblocks(R):
             warnings.warn("Coarse-graining with " + str(m) + " states cuts through "
                           + "a block of complex conjugate eigenvalues in the Schur "
@@ -233,30 +239,48 @@ def _do_schur(P, eta, m, z='LM', method='brandts'):
     Q = Q[:, 0:m]
     
     # Orthonormalize the sorted Schur vectors Q via modified Gram-Schmidt-orthonormalization,
-    # if the (Schur)vectors aren't orthogonal!
-    if not np.allclose(Q.T.dot(Q), np.eye(Q.shape[1]), rtol=1e6*eps, atol=1e6*eps):
-        Q = _gram_schmidt_mod(Q, eta)
-         
-    # Transform the orthonormalized Schur vectors of P_bar back to orthonormalized Schur vectors X of P.
+#    # if the (Schur)vectors aren't orthogonal!
+#    if not np.allclose(Q.T.dot(Q), np.eye(Q.shape[1]), rtol=1e6*eps, atol=1e6*eps):
+#        print("Info: The Schur vectors aren't orthogonal so they are eta-orthonormalized.")
+    Q = _gram_schmidt_mod(Q, eta)
+    # Transform the orthonormalized Schur vectors of P_bar back 
+    # to orthonormalized Schur vectors X of P.
     X = np.diag(1./np.sqrt(eta)).dot(Q)
+#    else:
+#        # Search for the constant (Schur) vector, if explicitly present.
+#        max_i = 0
+#        for i in range(m):
+#            vsum = np.sum(Q[:,i])
+#            dummy = ( np.ones(Q[:,i].shape) * (vsum / N1) )
+#            if np.allclose(Q[:,i], dummy, rtol=1e-6, atol=1e-5 ):  
+#                max_i = i
+#        # Shift non-constant first (Schur) vector to the right.
+#        Q[:,max_i] = Q[:, 0]
+#        # Transform the orthonormalized Schur vectors of P_bar back 
+#        # to orthonormalized Schur vectors X of P.
+#        X = np.diag(1./np.sqrt(eta)).dot(Q)
+#        # Set first (Schur) vector equal 1.
+#        X[:, 0] = 1.0
+         
     if not X.shape[0] == N1:
         raise ValueError("The number of rows n=%d of the Schur vector matrix X doesn't match those (n=%d) of P!" 
                          % (X.shape[0], P.shape[0]))
     # Raise, if the (Schur)vectors aren't D-orthogonal (don't fullfill the orthogonality condition)!
     if not np.allclose(X.conj().T.dot(np.diag(eta)).dot(X), np.eye(X.shape[1]), atol=1e-8, rtol=1e-5):
+        print(X.conj().T.dot(np.diag(eta)).dot(X))
         raise ValueError("Schur vectors appear to not be D-orthogonal!")
     # Raise, if X doesn't fullfill the invariant subspace condition!
     if method == 'krylov':
         dummy = subspace_angles(np.dot(P, X), X)
     else:
         dummy = subspace_angles(np.dot(P, X), np.dot(X, R))
-    test = np.all(np.allclose(dummy, 1e-8*eps, atol=1e-8, rtol=1e-5))
+    test = np.allclose(dummy, 0.0, atol=1e-8, rtol=1e-5)
     test1 = (dummy.shape[0] == m)
     if not test:
         raise ValueError("According to scipy.linalg.subspace_angles() X isn't an invariant "
                          + "subspace of P, since the subspace angles between the column spaces "
                          + "of P*X and X*R (resp. X, if you chose the Krylov-Schur method)"
-                         + "aren't near zero.")
+                         + "aren't near zero. The subspace angles are: " + str(dummy))
     elif not test1:
         warnings.warn("According to scipy.linalg.subspace_angles() the dimension of the "
                       + "column spaces of P*X and/or X*R (resp. X, if you chose the "
@@ -971,14 +995,13 @@ class GPCCA(object):
     ----------------------------------------------
 
     """
-    from msmtools.analysis import is_transition_matrix
-    from msmtools.estimation import connected_sets
 
-    def __init__(self, P, eta, z, method):
+    def __init__(self, P, eta, z='LM', method='brandts'):
         if issparse(P):
             warnings.warn("G-PCCA is only implemented for dense matrices, "
                           + "converting sparse transition matrix to dense ndarray.")
             P = P.toarray()
+        from msmtools.analysis import is_transition_matrix
         if not is_transition_matrix(P):
             raise ValueError("Input matrix P is not a transition matrix.")
         self.P = P
@@ -1071,7 +1094,7 @@ class GPCCA(object):
             raise ValueError("There is no point in clustering into", str(m), "clusters!")
         
         # Calculate Schur matrix R and Schur vector matrix X, if not adequately given.
-        _do_schur_helper(m_max)
+        self._do_schur_helper(m_max)
     
         minChi_list = []
         for m in range(m_min, m_max + 1):
@@ -1176,6 +1199,8 @@ class GPCCA(object):
         ----------------------------------------------
     
         """
+        from msmtools.estimation import connected_sets        
+
         n = np.shape(self.P)[0]
         
         # extract m_min, m_max, if given, else take single m
@@ -1205,12 +1230,12 @@ class GPCCA(object):
             component = components[i]
             rest = list(set(range(n)) - set(component))
             # is component closed?
-            if (np.sum(P[component, :][:, rest]) == 0):
+            if (np.sum(self.P[component, :][:, rest]) == 0):
                 closed_components.append(component)
         n_closed_components = len(closed_components)
         
         # Calculate Schur matrix R and Schur vector matrix X, if not adequately given.
-        _do_schur_helper(max(m_list))
+        self._do_schur_helper(max(m_list))
         
         # Initialize lists to collect results.
         chi_list = []
@@ -1248,9 +1273,9 @@ class GPCCA(object):
         
         opt_idx = np.argmax(crispness_list)
         self._m_opt = min(m_list) + opt_idx
-        chi = chi_list[opt_idx]
-        rot_matrix = rot_matrix_list[opt_idx]
-        crispness = crispness_list[opt_idx]
+        self._chi = chi_list[opt_idx]
+        self._rot_matrix = rot_matrix_list[opt_idx]
+        self._crispness = crispness_list[opt_idx]
         self._X = self.X[:, :self._m_opt]
         if not (self.method == 'krylov'):
             self._R = self.R[:self._m_opt, :self._m_opt]
@@ -1271,9 +1296,9 @@ class GPCCA(object):
         self._P_coarse = coarsegrain(self.P, self.eta, self._chi)
         
         if full_output:
-            return (self, chi, rot_matrix, crispness, X, R, chi_list, rot_matrix_list, crispness_list)
+            return (self, self._chi, self._rot_matrix, self._crispness, self.X, self.R, chi_list, rot_matrix_list, crispness_list)
         else:
-            return (self, chi, rot_matrix, crispness, X, R)
+            return (self, self._chi, self._rot_matrix, self._crispness, self.X, self.R)
         
 
     @property
