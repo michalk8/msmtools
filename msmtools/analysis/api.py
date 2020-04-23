@@ -1,8 +1,17 @@
 
 # This file is part of MSMTools.
 #
-# Copyright (c) 2015, 2014 Computational Molecular Biology Group, Freie Universitaet Berlin (GER)
-#
+# Copyright (c) 2014-2020 Computational Molecular Biology Group, Freie Universitaet Berlin (GER)
+# and regarding all G-PCCA related parts:
+# Copyright (c) 2020 Bernhard Reuter, Susanna Roeblitz and Marcus Weber, 
+# Zuse Institute Berlin, Takustrasse 7, 14195 Berlin
+# If you use G-PCCA or parts of it, cite the following reference:
+# ---------------------------------------------------------------
+# Reuter, B., Weber, M., Fackeldey, K., Röblitz, S., & Garcia, M. E. (2018). Generalized
+# Markov State Modeling Method for Nonequilibrium Biomolecular Dynamics: Exemplified on
+# Amyloid β Conformational Dynamics Driven by an Oscillating Electric Field. Journal of
+# Chemical Theory and Computation, 14(7), 3579–3594. https://doi.org/10.1021/acs.jctc.8b00079
+# ----------------------------------------------------------------
 # MSMTools is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
@@ -40,11 +49,12 @@ from . import dense
 from . import sparse
 
 __docformat__ = "restructuredtext en"
-__authors__ = __author__ = "Benjamin Trendelkamp-Schroer, Martin Scherer, Jan-Hendrik Prinz, Frank Noe"
-__copyright__ = "Copyright 2014, Computational Molecular Biology Group, FU-Berlin"
-__credits__ = ["Benjamin Trendelkamp-Schroer", "Martin Scherer", "Jan-Hendrik Prinz", "Frank Noe"]
+__authors__ = __author__ = "Benjamin Trendelkamp-Schroer, Martin Scherer, Jan-Hendrik Prinz, Frank Noe, Bernhard Reuter"
+__copyright__ = ["PCCA: Copyright 2014-2020, Computational Molecular Biology Group, FU-Berlin",
+                 "GPCCA: Copyright 2020, Bernhard Reuter, Susanna Roeblitz and Marcus Weber, Zuse Institute Berlin"]
+__credits__ = ["Benjamin Trendelkamp-Schroer", "Martin Scherer", "Jan-Hendrik Prinz", "Frank Noe", "Bernhard Reuter"]
 
-__version__ = "2.0.0"
+__version__ = "3.0.0"
 __maintainer__ = "Martin Scherer"
 __email__ = "m.scherer AT fu-berlin DOT de"
 
