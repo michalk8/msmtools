@@ -753,7 +753,7 @@ def coarsegrain(P, eta, chi):
     return P_coarse
 
 
-def gpcca_coarsegrain(P, eta, m):
+def gpcca_coarsegrain(P, eta, m, z='LM', method='brandts'):
     r"""
     Coarse-grains the transition matrix `P` to `m` sets using G-PCCA.
     Performs optimized spectral clustering via G-PCCA and coarse-grains
@@ -775,6 +775,42 @@ def gpcca_coarsegrain(P, eta, m):
 
     m : int
         Number of clusters to group into.
+        
+    z : string, (default='LM')
+        Specifies which portion of the eigenvalue spectrum of `P` 
+        is to be sought. The invariant subspace of `P` that is  
+        returned will be associated with this part of the spectrum.
+        Options are:
+        'LM': Largest magnitude (default).
+        'LR': Largest real parts.
+        
+    method : string, (default='brandts')
+        Which method to use to determine the invariant subspace.
+        Options are:
+        'brandts': Perform a full Schur decomposition of `P`
+         utilizing scipy.schur (but without the sorting option)
+         and sort the returned Schur form R and Schur vector 
+         matrix Q afterwards using a routine published by Brandts.
+         This is well tested und thus the default method, 
+         although it is also the slowest choice.
+         'scipy': Perform a full Schur decomposition of `P` 
+         while sorting up `m` (`m` < `n`) dominant eigenvalues 
+         (and associated Schur vectors) at the same time.
+         This will be faster than `brandts`, if `P` is large 
+         (n > 1000) and you sort a large part of the spectrum,
+         because your number of clusters `m` is large (>20).
+         This is still experimental, so use with CAUTION!
+        'krylov': Calculate an orthonormal basis of the subspace 
+         associated with the `m` dominant eigenvalues of `P` 
+         using the Krylov-Schur method as implemented in SLEPc.
+         This is the fastest choice and especially suitable for 
+         very large `P`, but it is still experimental.
+         Use with CAUTION! 
+         ----------------------------------------------------
+         To use this method you need to have petsc, petsc4py, 
+         selpc, and slepc4py installed. For optimal performance 
+         it is highly recommended that you also have mpi 
+         (at least version 2) and mpi4py installed.
 
     Returns
     -------
@@ -796,7 +832,7 @@ def gpcca_coarsegrain(P, eta, m):
     
     """                  
     #Matlab: Pc = pinv(chi'*diag(eta)*chi)*(chi'*diag(eta)*P*chi)
-    chi, _, _, _, _ = gpcca(P, eta, m)
+    chi, _, _, _, _ = GPCCA(P, eta, z, method).optimize(m)
     W = np.linalg.pinv(np.dot(chi.T, np.diag(eta)).dot(chi))
     A = np.dot(chi.T, np.diag(eta)).dot(P).dot(chi)
     P_coarse = W.dot(A)
