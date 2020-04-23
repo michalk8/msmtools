@@ -216,10 +216,6 @@ def sorted_scipy_schur(P, m, z='LM'):
         raise ValueError(str(m) + " dominant eigenvalues (associated with the "
                          + "same amount of clusters) were requested, but only " 
                          + str(sdim) + " were sorted up in the Schur form!")
-        
-    dummy = np.concatenate((np.dot(P, Q), np.dot(Q, R)), axis=1)
-    if not ( ( matrix_rank(dummy) - matrix_rank(np.dot(P, Q) ) ) == 0 ):
-        raise ValueError("X doesn't span a invariant subspace of P!")
 
     dummy = np.dot(P, Q)
     dummy1 = np.dot(Q, R)
