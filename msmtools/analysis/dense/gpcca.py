@@ -49,7 +49,9 @@ __email__ = "bernhard.reuter AT uni-tuebingen DOT de"
 import warnings
 import numpy as np
 import scipy.sparse as sp
+
 from scipy.sparse import issparse
+from typing import Union, Tuple, List, Dict
 
 # Machine double floating precision:
 eps = np.finfo(np.float64).eps
@@ -241,7 +243,7 @@ def _do_schur(P, eta, m, z='LM', method='brandts'):
         B = sp.dia_matrix(([1. / np.sqrt(eta)], [0]), shape=P.shape)
         P_bar = A.dot(P).dot(B)
     else:
-        P_bar = np.diag(np.sqrt(eta)).dot(P).dot(np.diag(1./np.sqrt(eta)))
+        P_bar = np.diag(np.sqrt(eta)).dot(P).dot(np.diag(1. / np.sqrt(eta)))
 
     # Make a Schur decomposition of P_bar and sort the Schur vectors (and form).
     if method == 'krylov':
@@ -256,14 +258,14 @@ def _do_schur(P, eta, m, z='LM', method='brandts'):
         # Since the Schur form R and Schur vectors are only partially
         # sorted, one doesn't need the whole R and Schur vector matrix Q.
         # Take only the sorted Schur form and the vectors belonging to it.
-        R = R[0:m, 0:m]
+        R = R[:m, :m]
         
-    Q = Q[:, 0:m]
+    Q = Q[:, :m]
     
     # Orthonormalize the sorted Schur vectors Q via modified Gram-Schmidt-orthonormalization,
     # if the (Schur)vectors aren't orthogonal!
     if not np.allclose(Q.T.dot(Q), np.eye(Q.shape[1]), rtol=1e6*eps, atol=1e6*eps):
-        print("Info: The Schur vectors aren't orthogonal so they are eta-orthonormalized.")
+        warnings.warn("The Schur vectors aren't orthogonal so they are eta-orthonormalized.")
         Q = _gram_schmidt_mod(Q, eta)
         # Transform the orthonormalized Schur vectors of P_bar back 
         # to orthonormalized Schur vectors X of P.
@@ -286,8 +288,8 @@ def _do_schur(P, eta, m, z='LM', method='brandts'):
         X[:, 0] = 1.0
          
     if not X.shape[0] == N1:
-        raise ValueError("The number of rows n=%d of the Schur vector matrix X doesn't match "
-                         + "those (n=%d) of P." % (X.shape[0], P.shape[0]))
+        raise ValueError(f"The number of rows `n={X.shape[0]}` of the Schur vector matrix X doesn't match "
+                         f"those `n={P.shape[0]}` of P.")
     # Raise, if the (Schur)vectors aren't D-orthogonal (don't fullfill the orthogonality condition)!
     if not np.allclose(X.conj().T.dot(np.diag(eta)).dot(X), np.eye(X.shape[1]), atol=1e-8, rtol=1e-5):
         # TODO @Marius: I'd decrease the tolerance, getting error here for 3+ MS states
@@ -300,20 +302,21 @@ def _do_schur(P, eta, m, z='LM', method='brandts'):
         dummy = subspace_angles(dp.A if issparse(dp) else dp, X)
     else:
         dummy = subspace_angles(np.dot(P, X), np.dot(X, R))
+
     test = np.allclose(dummy, 0.0, atol=1e-8, rtol=1e-5)
     test1 = (dummy.shape[0] == m)
     if not test:
-        raise ValueError("According to scipy.linalg.subspace_angles() X isn't an invariant "
-                         + "subspace of P, since the subspace angles between the column spaces "
-                         + "of P*X and X*R (resp. X, if you chose the Krylov-Schur method)"
-                         + "aren't near zero. The subspace angles are: " + str(dummy))
+        raise ValueError(f"According to scipy.linalg.subspace_angles() X isn't an invariant "
+                         f"subspace of P, since the subspace angles between the column spaces "
+                         f"of P*X and X*R (resp. X, if you chose the Krylov-Schur method)"
+                         f"aren't near zero. The subspace angles are: `{dummy}`")
     elif not test1:
         warnings.warn("According to scipy.linalg.subspace_angles() the dimension of the "
-                      + "column spaces of P*X and/or X*R (resp. X, if you chose the "
-                      + "Krylov-Schur method) is not equal to m.")
+                      "column spaces of P*X and/or X*R (resp. X, if you chose the "
+                      "Krylov-Schur method) is not equal to m.")
     # Raise, if the first column X[:,0] of the Schur vector matrix isn't constantly equal 1!
     if not np.allclose(X[:, 0], 1.0, atol=1e-8, rtol=1e-5):
-        raise ValueError("The first column X[:,0] of the Schur vector matrix isn't constantly equal 1.")
+        raise ValueError("The first column X[:, 0] of the Schur vector matrix isn't constantly equal 1.")
                   
     if method == 'krylov':
         return X
@@ -779,9 +782,14 @@ def coarsegrain(P, eta, chi):
     """
     #Matlab: Pc = pinv(chi'*diag(eta)*chi)*(chi'*diag(eta)*P*chi)
     W = np.linalg.pinv(np.dot(chi.T, np.diag(eta)).dot(chi))
-    A = np.dot(chi.T, np.diag(eta)).dot(P).dot(chi)
+    if issparse(P):
+        X = np.dot(sp.csr_matrix(chi.T), sp.dia_matrix(([eta], [0]), shape=(eta.shape[0], eta.shape[0])))
+    else:
+        X = np.dot(chi.T, np.diag(eta))
+
+    A = X.dot(P).dot(chi)
     P_coarse = W.dot(A)
-                       
+
     return P_coarse
 
 
@@ -866,7 +874,7 @@ def gpcca_coarsegrain(P, eta, m, z='LM', method='brandts'):
     
     """                  
     #Matlab: Pc = pinv(chi'*diag(eta)*chi)*(chi'*diag(eta)*P*chi)
-    chi, *_ = GPCCA(P, eta, z, method).optimize(m)
+    chi, *_ = GPCCA(P, eta, z, method).optimize(m, return_output=True)
     W = np.linalg.pinv(np.dot(chi.T, np.diag(eta)).dot(chi))
     A = np.dot(chi.T, np.diag(eta)).dot(P).dot(chi)
     P_coarse = W.dot(A)
@@ -1107,14 +1115,14 @@ class GPCCA(object):
             if self.X is not None and self.R is not None:
                 Xdim1, Xdim2 = self.X.shape
                 Rdim1, Rdim2 = self.R.shape
-                if not (Xdim1 == n):
-                    raise ValueError("The first dimension of X is " + str(Xdim1) + ". This doesn't match "
-                                     + "with the dimension of P (" + str(n) + "," + str(n) + ").")
+                if Xdim1 != n:
+                    raise ValueError(f"The first dimension of X is `{Xdim1}`. This doesn't match "
+                                     f"with the dimension of P [{n}, {n}].")
                 if Rdim1 != Rdim2:
                     raise ValueError("The Schur form R is not quadratic.")
                 if Xdim2 != Rdim1:
-                    raise ValueError("The second dimension of X is " + str(Xdim2) + ". This doesn't match "
-                                     + "with the dimensions of R (" + str(Rdim1) + "," + str(Rdim2) + ").")
+                    raise ValueError(f"The first dimension of X is `{Xdim1}`. This doesn't match "
+                                     f"with the dimension of R [{Rdim1}, {Rdim2}].")
                 if Rdim2 < m:
                     self.X, self.R = _do_schur(self.P, self.eta, m, self.z, self.method)
             else:
@@ -1176,7 +1184,8 @@ class GPCCA(object):
         return minChi_list
 
     # G-PCCA coarse-graining   
-    def optimize(self, m, full_output=False):
+    def optimize(self, m: Union[int, Tuple[int, int], List[int], Dict[str, int]],
+                 return_output: bool = False, full_output: bool = False):
         r"""
         Full G-PCCA [1]_ spectral clustering method with optimized memberships and the option
         to optimize the number of clusters (macrostates) `m` as well.
@@ -1276,21 +1285,27 @@ class GPCCA(object):
         n = self.P.shape[0]
         
         # extract m_min, m_max, if given, else take single m
+        if isinstance(m, (tuple, list)):
+            m_list = m
+            if m[0] >= m[1]:
+                raise ValueError(f"m_min ({m[0]}) must be smaller than m_max ({m[1]}).")
         if isinstance(m, dict):
             m_min = m.get('m_min', None)
             m_max = m.get('m_max', None)
-            if not (m_min < m_max):
-                raise ValueError("m_min must be smaller than m_max.")
+            if m_min >= m_max:
+                raise ValueError(f"m_min ({m_min}) must be smaller than m_max ({m_max}).")
             m_list = [m_min, m_max]
         elif isinstance(m, int):
             m_list = [m]
+        else:
+            raise TypeError(f"Invalid type")
             
         # validate input
         if max(m_list) > n:
-            raise ValueError("Number of macrostates m = " + str(max(m_list)) + " exceeds number "
-                             "of states of the transition matrix n = " + str(n) + ".")
-        if min(m_list) in [0,1]:
-            raise ValueError("There is no point in clustering into", str(m), "clusters.")
+            raise ValueError(f"Number of macrostates `m={max(m_list)}` exceeds number "
+                             f"of states of the transition matrix `n={n}`.")
+        if min(m_list) in [0, 1]:
+            raise ValueError(f"There is no point in clustering into `{m}` clusters.")
             
         # test connectivity
         components = connected_sets(self.P)
@@ -1361,19 +1376,19 @@ class GPCCA(object):
             # coarse-grained stationary distribution
             self._pi_coarse = np.dot(self._chi.T, self._pi)
         except ValueError as err:
-            print("Stationary distribution couldn't be calculated:", err)
-                         
+            raise RuntimeError("Stationary distribution couldn't be calculated.") from err
+
         ## coarse-grained input (initial) distribution of states
         self._eta_coarse = np.dot(self._chi.T, self.eta)
 
         # coarse-grain transition matrix 
-        self._P_coarse = None  # coarsegrain(self.P, self.eta, self._chi)
-        
-        if full_output:
-            return self._chi, self._rot_matrix, self._crispness, self.X, self.R, chi_list, rot_matrix_list, crispness_list
+        self._P_coarse = coarsegrain(self.P, self.eta, self._chi)
 
-        return self._chi, self._rot_matrix, self._crispness, self.X, self.R
-        
+        if return_output:
+            if full_output:
+                return self._chi, self._rot_matrix, self._crispness, self.X, self.R, chi_list, rot_matrix_list, crispness_list
+
+            return self._chi, self._rot_matrix, self._crispness, self.X, self.R
 
     @property
     def transition_matrix(self):
@@ -1405,8 +1420,8 @@ class GPCCA(object):
     
     @property
     def schur_matrix(self):
-        if np.all(self._R == None):
-            print("The Schur form R is not defined, if you chose Krylov-Schur as method.")
+        if self._R is None:
+            warnings.warn("The Schur form R is not defined, because you chose `method='krylov'`.")
         return self._R
     
     @property
