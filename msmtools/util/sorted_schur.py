@@ -462,7 +462,6 @@ def sorted_schur(P, m, z='LM', method='brandts'):
         try:
             from petsc4py import PETSc
             from slepc4py import SLEPc
-            raise ImportError()
         except ImportError:
             global _slepc_msg_show
             if not _slepc_msg_show or True:
@@ -471,7 +470,6 @@ def sorted_schur(P, m, z='LM', method='brandts'):
                       f"Defaulting to `method='{_default_schur_method}'`.")
                 _slepc_msg_show = True
                 method = _default_schur_method
-                raise ValueError()
 
     if method != 'krylov' and issparse(P):
         warnings.warn("Sparse implementation is only avaiable for `method='krylov'`, densifying.")
