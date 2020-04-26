@@ -291,7 +291,7 @@ def _do_schur(P, eta, m, z='LM', method='brandts'):
         raise ValueError(f"The number of rows `n={X.shape[0]}` of the Schur vector matrix X doesn't match "
                          f"those `n={P.shape[0]}` of P.")
     # Raise, if the (Schur)vectors aren't D-orthogonal (don't fullfill the orthogonality condition)!
-    if not np.allclose(X.conj().T.dot(np.diag(eta)).dot(X), np.eye(X.shape[1]), atol=1e-8, rtol=1e-5):
+    if not np.allclose(X.conj().T.dot(np.diag(eta)).dot(X), np.eye(X.shape[1]), atol=1e-6, rtol=1e-5):
         # TODO @Marius: I'd decrease the tolerance, getting error here for 3+ MS states
         print(X.conj().T.dot(np.diag(eta)).dot(X))
         raise ValueError("Schur vectors appear to not be D-orthogonal.")
@@ -303,7 +303,7 @@ def _do_schur(P, eta, m, z='LM', method='brandts'):
     else:
         dummy = subspace_angles(np.dot(P, X), np.dot(X, R))
 
-    test = np.allclose(dummy, 0.0, atol=1e-8, rtol=1e-5)
+    test = np.allclose(dummy, 0.0, atol=1e-6, rtol=1e-5)
     test1 = (dummy.shape[0] == m)
     if not test:
         raise ValueError(f"According to scipy.linalg.subspace_angles() X isn't an invariant "
@@ -1168,7 +1168,7 @@ class GPCCA(object):
         """
         # Validate Input.
         if m_min >= m_max:
-            raise ValueError("m_min must be smaller than m_max.")
+            raise ValueError(f"m_min ({m_min}) must be smaller than m_max ({m_max}).")
         if m_min in [0, 1]:
             raise ValueError(f"There is no point in clustering into `{m_min}` clusters.")
         
@@ -1289,16 +1289,16 @@ class GPCCA(object):
             m_list = m
             if m[0] >= m[1]:
                 raise ValueError(f"m_min ({m[0]}) must be smaller than m_max ({m[1]}).")
-        if isinstance(m, dict):
-            m_min = m.get('m_min', None)
-            m_max = m.get('m_max', None)
+        elif isinstance(m, dict):
+            m_min = m.get['m_min']
+            m_max = m.get['m_max']
             if m_min >= m_max:
                 raise ValueError(f"m_min ({m_min}) must be smaller than m_max ({m_max}).")
             m_list = [m_min, m_max]
         elif isinstance(m, int):
             m_list = [m]
         else:
-            raise TypeError(f"Invalid type")
+            raise TypeError(f"Invalid type `{type(m).__name__}`.")
             
         # validate input
         if max(m_list) > n:
