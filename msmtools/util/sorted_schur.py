@@ -7,12 +7,14 @@ from scipy.sparse import issparse, isspmatrix_csr, csr_matrix
 
 # Machine double floating precision:
 eps = np.finfo(np.float64).eps
+_slepc_msg_show = False
+_default_schur_method = 'scipy'
 
 
 def _initliaze_matrix(M, P):
     if issparse(P):
         if not isspmatrix_csr(P):
-            warnings.warn('Only CSR matrix are supported, converting to CSR format.')
+            warnings.warn('Only CSR sparse matrices are supported, converting to CSR format.')
             P = csr_matrix(P)
         M.createAIJ(size=P.shape, csr=(P.indptr, P.indices, P.data))
     else:
@@ -82,6 +84,8 @@ def top_eigenvalues(P, m, z='LM'):
         E.setWhichEigenpairs(E.Which.LARGEST_MAGNITUDE)
     elif z == 'LR':
         E.setWhichEigenpairs(E.Which.LARGEST_REAL)
+    else:
+        raise ValueError(f"Invalid spectrum sorting options `{z}`. Valid options are: `'LM'`, `'LR'`")
     # Solve the eigensystem.
     E.solve()
 
@@ -134,7 +138,7 @@ def smallest_eigenvalue(P, z='SM'):
     from slepc4py import SLEPc 
     
     M = PETSc.Mat().create()
-    M.createDense(list(np.shape(P)), array=P)
+    _initliaze_matrix(M, P)
     # Creates EPS object.
     E = SLEPc.EPS()
     E.create()
@@ -148,12 +152,14 @@ def smallest_eigenvalue(P, z='SM'):
         E.setWhichEigenpairs(E.Which.SMALLEST_MAGNITUDE)
     elif z == 'SR':
         E.setWhichEigenpairs(E.Which.SMALLEST_REAL)
+    else:
+        raise ValueError(f"Invalid spectrum sorting options `{z}`. Valid options are: `'SM'`, `'SR'`")
     # Solve the eigensystem.
     E.solve()
 
     nconv = E.getConverged()
     # Warn, if nconv smaller than 1.
-    if (nconv < 1):
+    if nconv < 1:
         warnings.warn("The number of converged eigenpairs is too small.")
     # Get the smallest eigenvalue.
     smallest_eigenval = E.getEigenvalue(0)
@@ -182,21 +188,21 @@ def sorted_scipy_schur(P, m, z='LM'):
         'LR': the m eigenvalues with the largest real part are sorted up.
         
     """
-    n = np.shape(P)[0]
+    n = P.shape[0]
 
     if m == n:
-        raise ValueError("Can't sort the whole Schur form with Scipy-Schur! "
-                         + "Use one of the other methods instead.")
+        raise ValueError("Can't sort the whole Schur form with Scipy-Schur. "
+                         "Use one of the other methods instead.")
 
     # Calculate the top m+1 eigenvalues and secure that you
     # don't separate conjugate eigenvalues (corresponding to 2x2-block in R),
     # if you take the dominant m eigenvalues to cluster the data.
     top_eigenvals, block_split = top_eigenvalues(P, m, z=z)
     
-    if (block_split == True):
-        raise ValueError("Clustering P into " + str(m) + " clusters will split "
-                         + "a pair of conjugate eigenvalues! Choose one cluster "
-                         + "more or less.")
+    if block_split:
+        raise ValueError(f"Clustering P into `{m}` clusters will split "
+                         f"a pair of conjugate eigenvalues! Choose one cluster "
+                         f"more or less.")
     
     #eigenval_in = top_eigenvals[m-1]
     #eigenval_out = top_eigenvals[m]
@@ -220,12 +226,14 @@ def sorted_scipy_schur(P, m, z='LM'):
             cutoff = smallest_eigenval
 
         R, Q, sdim = schur(P, sort=lambda x: np.real(x) > cutoff)
-    
+    else:
+        raise ValueError(f"Invalid spectrum sorting options `{z}`. Valid options are: `'LM'`, `'LR'`")
+
     # Check, if m eigenvalues were really sorted up.
     if sdim < m:
-        raise ValueError(str(m) + " dominant eigenvalues (associated with the "
-                         + "same amount of clusters) were requested, but only " 
-                         + str(sdim) + " were sorted up in the Schur form.")
+        raise ValueError(f"`{m}` dominant eigenvalues (associated with the "
+                         f"same amount of clusters) were requested, but only " 
+                         f"`{sdim}` were sorted up in the Schur form.")
 
     dummy = np.dot(P, Q)
     dummy1 = np.dot(Q, R)
@@ -234,12 +242,11 @@ def sorted_scipy_schur(P, m, z='LM'):
 #     test1 = ( ( matrix_rank(dummy2) - matrix_rank(dummy) ) == 0 )
     test2 = np.all(np.allclose(dummy3, 0.0, atol=1e-8, rtol=1e-5))
     if not test2:
-        raise ValueError("According to scipy.linalg.subspace_angles() sorted Scipy-Schur didn't "
-                         + "return the invariant subspace associated with the top m eigenvalues, "
-                         + "since the subspace angles between the column spaces of P*Q and Q*L"
-                         + "aren't near zero (L is a diagonal matrix with the "
-                         + "sorted top eigenvalues on the diagonal). The subspace angles are: "
-                         + str(dummy3))
+        raise ValueError(f"According to scipy.linalg.subspace_angles() sorted Scipy-Schur didn't "
+                         f"return the invariant subspace associated with the top m eigenvalues, "
+                         f"since the subspace angles between the column spaces of P*Q and Q*L"
+                         f"aren't near zero (L is a diagonal matrix with the "
+                         f"sorted top eigenvalues on the diagonal). The subspace angles are: `{dummy3}`")
 #     elif not test1:
 #         warnings.warn("According to numpy.linalg.matrix_rank() sorted Scipy-Schur didn't "
 #                       + "return the invariant subspace associated with the top m "
@@ -292,8 +299,8 @@ def sorted_krylov_schur(P, m, z='LM'):
         
     """
     from petsc4py import PETSc
-    from slepc4py import SLEPc 
-    
+    from slepc4py import SLEPc
+
     # Calculate the top m+1 eigenvalues and secure that you
     # don't separate conjugate eigenvalues (corresponding to 2x2-block in R),
     # if you take the dominant m eigenvalues to cluster the data.
@@ -333,6 +340,8 @@ def sorted_krylov_schur(P, m, z='LM'):
         E.setWhichEigenpairs(E.Which.LARGEST_MAGNITUDE)
     elif z == 'LR':
         E.setWhichEigenpairs(E.Which.LARGEST_REAL)
+    else:
+        raise ValueError(f"Invalid spectrum sorting options `{z}`. Valid options are: `'LM'`, `'LR'`")
     # Solve the eigensystem.
     E.solve()
     # getInvariantSubspace() gets an orthonormal basis of the computed invariant subspace.
@@ -390,9 +399,8 @@ def sorted_krylov_schur(P, m, z='LM'):
     dummy4 = subspace_angles(dummy, Q)
     test4 = np.allclose(dummy4, 0.0, atol=1e-6, rtol=1e-5)
     if not test4:
-        raise ValueError("According to scipy.linalg.subspace_angles() Krylov-Schur didn't "
-                         + "return an invariant subspace of P! The subspace angles are: "
-                         + str(dummy4))
+        raise ValueError(f"According to scipy.linalg.subspace_angles() Krylov-Schur didn't "
+                         f"return an invariant subspace of P. The subspace angles are: `{dummy4}`.")
 #     elif not test1:
 #         warnings.warn("According to numpy.linalg.matrix_rank() Krylov-Schur didn't "
 #                       + "return the invariant subspace associated with the top m "
@@ -400,16 +408,15 @@ def sorted_krylov_schur(P, m, z='LM'):
 #                       + "have the same rank (L is a diagonal matrix with the "
 #                       + "sorted top eigenvalues on the diagonal).")
     elif not test2:
-        warnings.warn("According to scipy.linalg.subspace_angles() Krylov-Schur didn't "
-                      + "return the invariant subspace associated with the top m eigenvalues, "
-                      + "since the subspace angles between the column spaces of P*Q and Q*L "
-                      + "aren't near zero (L is a diagonal matrix with the "
-                      + "sorted top eigenvalues on the diagonal). The subspace angles are: "
-                      + str(dummy3))
+        warnings.warn(f"According to scipy.linalg.subspace_angles() Krylov-Schur didn't "
+                      f"return the invariant subspace associated with the top m eigenvalues, "
+                      f"since the subspace angles between the column spaces of P*Q and Q*L "
+                      f"aren't near zero (L is a diagonal matrix with the "
+                      f"sorted top eigenvalues on the diagonal). The subspace angles are: `{dummy3}`.")
     elif not test3:
         warnings.warn("According to scipy.linalg.subspace_angles() the dimension of the "
-                      + "column space of P*Q and/or Q*L is not equal to m (L is a diagonal "
-                      + "matrix with the sorted top eigenvalues on the diagonal).")
+                      "column space of P*Q and/or Q*L is not equal to m (L is a diagonal "
+                      "matrix with the sorted top eigenvalues on the diagonal).")
     
     return Q, top_eigenvals, top_eigenvals_error
 
@@ -451,6 +458,21 @@ def sorted_schur(P, m, z='LM', method='brandts'):
          (and associated Schur vectors) at the same time.
         
     """
+    if method == 'krylov':
+        try:
+            from petsc4py import PETSc
+            from slepc4py import SLEPc
+            raise ImportError()
+        except ImportError:
+            global _slepc_msg_show
+            if not _slepc_msg_show or True:
+                print(f"Unable to import PETSc or SLEPc.\n"
+                      f"You can install it from: https://slepc4py.readthedocs.io/en/stable/install.html\n"
+                      f"Defaulting to `method='{_default_schur_method}'`.")
+                _slepc_msg_show = True
+                method = _default_schur_method
+                raise ValueError()
+
     if method != 'krylov' and issparse(P):
         warnings.warn("Sparse implementation is only avaiable for `method='krylov'`, densifying.")
         P = P.A
@@ -474,9 +496,9 @@ def sorted_schur(P, m, z='LM', method='brandts'):
     elif method == 'krylov':
         Q, _, _ = sorted_krylov_schur(P, m, z=z)
     else:
-        raise ValueError("Unknown method" + method)
+        raise ValueError(f"Unknown method `{method!r}`.")
        
     if method == 'krylov':
         return Q
-    else:
-        return (R, Q)
+
+    return R, Q
