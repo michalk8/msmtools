@@ -75,6 +75,8 @@ def get_cmdclass():
 
 
 metadata = dict(
+    use_scm_version=True,
+
     name='msmtools',
     maintainer='Martin K. Scherer',
     maintainer_email='m.scherer@fu-berlin.de',
@@ -95,7 +97,7 @@ metadata = dict(
                       ],
     setup_requires=['numpy', 'cython'],
     zip_safe=False,
-    cmdclass=get_cmdclass(),
+    # cmdclass=get_cmdclass(),
 )
 
 
