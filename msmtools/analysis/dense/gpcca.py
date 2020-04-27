@@ -119,7 +119,7 @@ def _gram_schmidt_mod(X, eta):
         vsum = np.sum(X[:,i])
         dummy = ( np.ones(X[:,i].shape) * (vsum / n) )
         if np.allclose(X[:,i], dummy, rtol=1e-6, atol=1e-5 ):  
-            max_i = i
+            max_i = i #TODO: check, if more than one vec fulfills this
         
     # Shift non-constant first (Schur) vector to the right.
     X[:,max_i] = X[:, 0]
@@ -127,7 +127,7 @@ def _gram_schmidt_mod(X, eta):
     # _gram_schmidt_mod(), will be multiplied with 1.0./sqrt(eta) - so the first (Schur) vector will 
     # become the unit vector 1!).
     X[:, 0] = np.sqrt(eta)
-    # Raise, if the subspace changed! TODO: Mb test rank instead?
+    # Raise, if the subspace changed!
     dummy = subspace_angles(X, Xc)
     if not np.allclose(dummy, 0.0, atol=1e-8, rtol=1e-5): 
         print(Xc)
@@ -146,7 +146,7 @@ def _gram_schmidt_mod(X, eta):
         R[j,j] = np.linalg.norm(v) ;
         Q[:,j] = np.true_divide(v, R[j,j])
 
-    # Raise, if the subspace changed! TODO: Mb test rank instead?
+    # Raise, if the subspace changed!
     dummy = subspace_angles(Q, Xc)
     if not np.allclose(dummy, 0.0, atol=1e-8, rtol=1e-5):
         raise ValueError("The subspace of Q derived by eta-orthogonalization doesn't match the "
@@ -243,7 +243,7 @@ def _do_schur(P, eta, m, z='LM', method='brandts'):
         Q = sorted_schur(P_bar, m, z, method) #Pbar!!!
     else:
         R, Q = sorted_schur(P_bar, m, z, method) #Pbar!!!
-        if m - 1 not in _find_twoblocks(R):
+        if m - 1 not in _find_twoblocks(R): #TODO: Rethink this, mb only for stuff sorted with brandts...
             warnings.warn("Coarse-graining with " + str(m) + " states cuts through "
                           + "a block of complex conjugate eigenvalues in the Schur "
                           + "form. The result will be of questionable meaning. "
@@ -271,7 +271,7 @@ def _do_schur(P, eta, m, z='LM', method='brandts'):
             vsum = np.sum(Q[:,i])
             dummy = ( np.ones(Q[:,i].shape) * (vsum / n) )
             if np.allclose(Q[:,i], dummy, rtol=1e-6, atol=1e-5 ):  
-                max_i = i   
+                max_i = i #TODO: check, if more than one vec fulfills this
         # Shift non-constant first (Schur) vector to the right.
         Q[:,max_i] = Q[:, 0]
         # Transform the orthonormalized Schur vectors of P_bar back 
@@ -1353,7 +1353,7 @@ class GPCCA(object):
         # stationary distribution
         from msmtools.analysis import stationary_distribution as _stationary_distribution
         try:
-            self._pi = _stationary_distribution(self.P)
+            self._pi = _stationary_distribution(self.P) #TODO: Use eigenvec based calc as standard instead of backward committor
             # coarse-grained stationary distribution
             self._pi_coarse = np.dot(self._chi.T, self._pi)
         except ValueError as err:
