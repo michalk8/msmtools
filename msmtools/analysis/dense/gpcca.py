@@ -1290,8 +1290,8 @@ class GPCCA(object):
             if m[0] >= m[1]:
                 raise ValueError(f"m_min ({m[0]}) must be smaller than m_max ({m[1]}).")
         elif isinstance(m, dict):
-            m_min = m.get['m_min']
-            m_max = m.get['m_max']
+            m_min = m['m_min']
+            m_max = m['m_max']
             if m_min >= m_max:
                 raise ValueError(f"m_min ({m_min}) must be smaller than m_max ({m_max}).")
             m_list = [m_min, m_max]
@@ -1376,7 +1376,7 @@ class GPCCA(object):
             # coarse-grained stationary distribution
             self._pi_coarse = np.dot(self._chi.T, self._pi)
         except ValueError as err:
-            raise RuntimeError("Stationary distribution couldn't be calculated.") from err
+            warnings.warn("Stationary distribution couldn't be calculated.")
 
         ## coarse-grained input (initial) distribution of states
         self._eta_coarse = np.dot(self._chi.T, self.eta)
