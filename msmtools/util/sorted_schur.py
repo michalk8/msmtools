@@ -389,7 +389,7 @@ def sorted_krylov_schur(P, m, z='LM'):
 
     dummy = np.dot(P, csr_matrix(Q) if issparse(P) else Q)
     if issparse(dummy):
-        dummy = dummy.A
+        dummy = dummy.toarray()
 
     dummy1 = np.dot(Q, np.diag(top_eigenvals[:m]))
 #     dummy2 = np.concatenate((dummy, dummy1), axis=1)
