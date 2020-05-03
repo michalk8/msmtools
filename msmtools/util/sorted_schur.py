@@ -8,7 +8,7 @@ from scipy.sparse import issparse, isspmatrix_csr, csr_matrix
 
 # Machine double floating precision:
 eps = np.finfo(np.float64).eps
-_slepc_msg_show = False
+_no_slepc_error_msg_shown = False
 _default_schur_method = 'brandts'
 
 
@@ -464,12 +464,12 @@ def sorted_schur(P, m, z='LM', method='brandts'):
             from petsc4py import PETSc
             from slepc4py import SLEPc
         except ImportError:
-            global _slepc_msg_show
-            if not _slepc_msg_show or True:
+            global _no_slepc_error_msg_shown
+            if not _no_slepc_error_msg_shown:
                 print(f"Unable to import PETSc or SLEPc.\n"
                       f"You can install it from: https://slepc4py.readthedocs.io/en/stable/install.html\n"
                       f"Defaulting to `method='{_default_schur_method}'`.")
-                _slepc_msg_show = True
+                _no_slepc_error_msg_shown = True
                 method = _default_schur_method
 
     if method != 'krylov' and issparse(P):
