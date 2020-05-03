@@ -51,7 +51,7 @@ import numpy as np
 import scipy.sparse as sp
 
 from scipy.sparse import issparse
-from typing import Union, Tuple, List, Dict
+from typing import Union, Tuple, Dict
 
 # Machine double floating precision:
 eps = np.finfo(np.float64).eps
