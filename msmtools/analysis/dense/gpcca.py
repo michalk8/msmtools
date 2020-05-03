@@ -1391,7 +1391,7 @@ class GPCCA(object):
         self._P_coarse = coarsegrain(self.P, self.eta, self._chi)
 
         if return_extra:
-            return self, chi_list, rot_matrix_list, crispness_list
+            return self, self.X, self.R, chi_list, rot_matrix_list, crispness_list
 
         return self
 

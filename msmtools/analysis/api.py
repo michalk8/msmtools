@@ -1552,11 +1552,10 @@ def _pcca_object(T, m, use_gpcca=False, eta=None, z='LM', method='brandts'):
     if not use_gpcca:
         return dense.pcca.PCCA(T, m)
     else:
-        if eta == None:
-            eta = np.ones(np.shape(T)[0])
-            eta = np.true_divide(eta, np.sum(eta))
-        gpcca_obj, _, _, _, _, _ = dense.gpcca.GPCCA(T, eta, z, method).optimize(m)
-        return gpcca_obj
+        if eta is None:
+            eta = _np.ones(_np.shape(T)[0])
+            eta = _np.true_divide(eta, _np.sum(eta))
+        return dense.gpcca.GPCCA(T, eta, z, method).optimize(m)
 
 
 def pcca_memberships(T, m, use_gpcca=False, eta=None, z='LM', method='brandts'):
