@@ -8,10 +8,10 @@ from scipy.sparse import issparse, isspmatrix_csr, csr_matrix
 # Machine double floating precision:
 eps = np.finfo(np.float64).eps
 _slepc_msg_show = False
-_default_schur_method = 'scipy'
+_default_schur_method = 'brandts'
 
 
-def _initliaze_matrix(M, P):
+def _initialize_matrix(M, P):
     if issparse(P):
         if not isspmatrix_csr(P):
             warnings.warn('Only CSR sparse matrices are supported, converting to CSR format.')
@@ -70,7 +70,7 @@ def top_eigenvalues(P, m, z='LM'):
     block_split = False
     
     M = PETSc.Mat().create()
-    _initliaze_matrix(M, P)
+    _initialize_matrix(M, P)
     # Creates EPS object.
     E = SLEPc.EPS()
     E.create()
@@ -138,7 +138,7 @@ def smallest_eigenvalue(P, z='SM'):
     from slepc4py import SLEPc 
     
     M = PETSc.Mat().create()
-    _initliaze_matrix(M, P)
+    _initialize_matrix(M, P)
     # Creates EPS object.
     E = SLEPc.EPS()
     E.create()
@@ -312,7 +312,7 @@ def sorted_krylov_schur(P, m, z='LM'):
                          f"more or less.")
     
     M = PETSc.Mat().create()
-    _initliaze_matrix(M, P)
+    _initialize_matrix(M, P)
     # Creates EPS object.
     E = SLEPc.EPS()
     E.create()

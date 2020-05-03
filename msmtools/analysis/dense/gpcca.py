@@ -231,7 +231,7 @@ def _do_schur(P, eta, m, z='LM', method='brandts'):
         raise ValueError("P matrix isn't quadratic.")
     if eta.shape[0] != N1:
         raise ValueError("eta vector length doesn't match with the shape of P.")
-    if not np.allclose(np.sum(P, 1), 1, rtol=1e-6, atol=1e-6):  # previously eps
+    if not np.allclose(np.sum(P, 1), 1.0, rtol=1e-6, atol=1e-6):  # previously eps
         raise ValueError("Not all rows of P sum up to one (within numerical precision). "
                          "P must be a row-stochastic matrix.")
     if not np.all(eta > eps):
@@ -299,7 +299,7 @@ def _do_schur(P, eta, m, z='LM', method='brandts'):
 
     if method == 'krylov':
         dp = np.dot(P, sp.csr_matrix(X) if issparse(P) else X)
-        dummy = subspace_angles(dp.A if issparse(dp) else dp, X)
+        dummy = subspace_angles(dp.toarray() if issparse(dp) else dp, X)
     else:
         dummy = subspace_angles(np.dot(P, X), np.dot(X, R))
 
@@ -783,11 +783,11 @@ def coarsegrain(P, eta, chi):
     #Matlab: Pc = pinv(chi'*diag(eta)*chi)*(chi'*diag(eta)*P*chi)
     W = np.linalg.pinv(np.dot(chi.T, np.diag(eta)).dot(chi))
     if issparse(P):
-        X = np.dot(sp.csr_matrix(chi.T), sp.dia_matrix(([eta], [0]), shape=(eta.shape[0], eta.shape[0])))
+        V = np.dot(sp.csr_matrix(chi.T), sp.dia_matrix(([eta], [0]), shape=(eta.shape[0], eta.shape[0])))
     else:
-        X = np.dot(chi.T, np.diag(eta))
+        V = np.dot(chi.T, np.diag(eta))
 
-    A = X.dot(P).dot(chi)
+    A = V.dot(P).dot(chi)
     P_coarse = W.dot(A)
 
     return P_coarse
@@ -1090,7 +1090,11 @@ class GPCCA(object):
             raise ValueError("You didn't give a valid method to determine the invariant subspace.")
 
         self.P = P
-        self.eta = (np.ones(P.shape[0]) / P.shape[0]) if eta is None else eta
+        if eta is None:
+            self.eta = np.true_divide(np.ones(P.shape[0]), P.shape[0])
+        else:
+            self.eta = eta
+
         if len(self.eta) != P.shape[0]:
             raise ValueError(f"eta vector length ({len(eta)}) doesn't match with the shape of P {P.shape}.")
 
@@ -1184,7 +1188,7 @@ class GPCCA(object):
         return minChi_list
 
     # G-PCCA coarse-graining   
-    def optimize(self, m: Union[int, Tuple[int, int], List[int], Dict[str, int]],
+    def optimize(self, m: Union[int, Tuple[int, int], Dict[str, int]],
                  return_extra: bool = False):
         r"""
         Full G-PCCA [1]_ spectral clustering method with optimized memberships and the option
@@ -1286,6 +1290,8 @@ class GPCCA(object):
         
         # extract m_min, m_max, if given, else take single m
         if isinstance(m, (tuple, list)):
+            if len(m) != 2:
+                raise ValueError(f"Expected range to be of size 2, found `{len(m)}`.")
             m_list = m
             if m[0] >= m[1]:
                 raise ValueError(f"m_min ({m[0]}) must be smaller than m_max ({m[1]}).")
