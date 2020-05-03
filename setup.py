@@ -75,8 +75,6 @@ def get_cmdclass():
 
 
 metadata = dict(
-    use_scm_version=True,
-
     name='msmtools',
     maintainer='Martin K. Scherer',
     maintainer_email='m.scherer@fu-berlin.de',
@@ -94,10 +92,11 @@ metadata = dict(
     install_requires=['numpy>=1.6.0',
                       'scipy>=0.11',
                       'decorator',
+                      'future-fstrings',
                       ],
     setup_requires=['numpy', 'cython'],
     zip_safe=False,
-    # cmdclass=get_cmdclass(),
+    cmdclass=get_cmdclass(),
 )
 
 
@@ -121,8 +120,6 @@ if not(len(sys.argv) == 1 or (len(sys.argv) >= 2 and ('--help' in sys.argv[1:] o
     metadata['configuration'] = configuration
 
 if __name__ == '__main__':
-    try:
-        from setuptools import setup
-    except ImportError:
-        from distutils.core import setup
+    from numpy.distutils.core import setup
     setup(**metadata)
+

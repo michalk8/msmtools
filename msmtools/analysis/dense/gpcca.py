@@ -1,4 +1,4 @@
-
+# -*- coding: future_fstrings -*-
 # This file is part of MSMTools.
 #
 # Copyright (c) 2020 Bernhard Reuter, Susanna Roeblitz and Marcus Weber, 
