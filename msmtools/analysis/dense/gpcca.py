@@ -1077,9 +1077,6 @@ class GPCCA(object):
     """
 
     def __init__(self, P, eta=None, z='LM', method='brandts'):
-        if issparse(P):
-            if method != 'krylov':
-                raise ValueError("Sparse implementation is only available for `method='krylov'`.")
         from msmtools.analysis import is_transition_matrix
 
         if not is_transition_matrix(P):

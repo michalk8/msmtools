@@ -474,7 +474,7 @@ def sorted_schur(P, m, z='LM', method='brandts'):
 
     if method != 'krylov' and issparse(P):
         warnings.warn("Sparse implementation is only avaiable for `method='krylov'`, densifying.")
-        P = P.A
+        P = P.toarray()
 
     if method == 'brandts':
         # Calculate the top m+1 eigenvalues and secure that you
