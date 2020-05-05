@@ -1207,11 +1207,10 @@ class GPCCA(object):
             If dict: minmal and maximal number of clusters `m_min` and `m_max` given as
             a dict `{'m_min': int, 'm_max': int}`.
         
-        full_output : boolean, (default=False)
-            If False, only the optimal results `chi`, `rot_matrix`, `crispness` and the
-            matrices `X`, `R` will be returned.
-            If True, the optimal results `chi`, `rot_matrix`, `crispness`, the matrices `X`, `R`
-            and lists containing results for all :math:`m \in [m_{min},m_{max}]` will be returned.
+        return_extra: boolean, (default=False)
+            If False, only `self` will be returned.
+            If True, also the matrices `X`, `R` and lists containing results
+            for all :math:`m \in [m_{min},m_{max}]` will be returned.
 
         Returns
         -------
