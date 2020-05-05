@@ -1086,6 +1086,11 @@ class GPCCA(object):
             raise ValueError("You didn't give a valid sorting criterion z. Valid options are `'LM'` and `'LR'`.")
         if method not in ['brandts', 'scipy', 'krylov']:
             raise ValueError("You didn't give a valid method to determine the invariant subspace.")
+          
+        if issparse(P) and method != 'krylov':
+            warnings.warn("Sorted Schur decoposition via the methods `brandts` and `scipy` is only implemented "
+                          "for dense matrices. Converting sparse transition matrix to dense ndarray.")
+            P = P.toarray()
 
         self.P = P
         if eta is None:
