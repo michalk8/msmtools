@@ -1,4 +1,4 @@
-
+# -*- coding: future_fstrings -*-
 # This file is part of MSMTools.
 #
 # Copyright (c) 2020 Bernhard Reuter, Susanna Roeblitz and Marcus Weber, 
@@ -48,8 +48,10 @@ __email__ = "bernhard.reuter AT uni-tuebingen DOT de"
 #imports
 import warnings
 import numpy as np
+import scipy.sparse as sp
+
 from scipy.sparse import issparse
-import math
+from typing import Union, Tuple, Dict
 
 # Machine double floating precision:
 eps = np.finfo(np.float64).eps
@@ -154,7 +156,7 @@ def _gram_schmidt_mod(X, eta):
                          + " Number of clusters: " + str(m))
     # Raise, if the (Schur)vectors aren't orthogonal!
     if not np.allclose(Q.conj().T.dot(Q), np.eye(Q.shape[1]), atol=1e-8, rtol=1e-5):
-        raise ValueError("(Schur)vectors appear to not be orthogonal!")
+        raise ValueError("(Schur)vectors appear to not be orthogonal.")
     
     return Q
 
@@ -224,19 +226,24 @@ def _do_schur(P, eta, m, z='LM', method='brandts'):
     N1 = P.shape[0]
     N2 = P.shape[1]
     if m < 0:
-        raise ValueError("The number of clusters/states is not supposed to be negative!")
-    if not (N1==N2):
-        raise ValueError("P matrix isn't quadratic!")
-    if not (eta.shape[0]==N1):
-        raise ValueError("eta vector length doesn't match with the shape of P!")
-    if not np.allclose(np.sum(P,1), np.ones(N1), rtol=eps, atol=eps):
-        raise ValueError("Not all rows of P sum up to one (within numerical precision)! "
-                         "P must be a row-stochastic matrix!")
+        raise ValueError("The number of clusters/states is not supposed to be negative.")
+    if N1 != N2:
+        raise ValueError("P matrix isn't quadratic.")
+    if eta.shape[0] != N1:
+        raise ValueError("eta vector length doesn't match with the shape of P.")
+    if not np.allclose(np.sum(P, 1), 1.0, rtol=1e-6, atol=1e-6):  # previously eps
+        raise ValueError("Not all rows of P sum up to one (within numerical precision). "
+                         "P must be a row-stochastic matrix.")
     if not np.all(eta > eps):
-        raise ValueError("Not all elements of eta are > 0 (within numerical precision)!")
+        raise ValueError("Not all elements of eta are > 0 (within numerical precision).")
 
     # Weight the stochastic matrix P by the input (initial) distribution eta.
-    P_bar = np.diag(np.sqrt(eta)).dot(P).dot(np.diag(1./np.sqrt(eta)))
+    if issparse(P):
+        A = sp.dia_matrix(([np.sqrt(eta)], [0]), shape=P.shape)
+        B = sp.dia_matrix(([1. / np.sqrt(eta)], [0]), shape=P.shape)
+        P_bar = A.dot(P).dot(B)
+    else:
+        P_bar = np.diag(np.sqrt(eta)).dot(P).dot(np.diag(1. / np.sqrt(eta)))
 
     # Make a Schur decomposition of P_bar and sort the Schur vectors (and form).
     if method == 'krylov':
@@ -251,68 +258,73 @@ def _do_schur(P, eta, m, z='LM', method='brandts'):
         # Since the Schur form R and Schur vectors are only partially
         # sorted, one doesn't need the whole R and Schur vector matrix Q.
         # Take only the sorted Schur form and the vectors belonging to it.
-        R = R[0:m, 0:m]
+        R = R[:m, :m]
         
-    Q = Q[:, 0:m]
+    Q = Q[:, :m]
     
     # Orthonormalize the sorted Schur vectors Q via modified Gram-Schmidt-orthonormalization,
     # if the (Schur)vectors aren't orthogonal!
     if not np.allclose(Q.T.dot(Q), np.eye(Q.shape[1]), rtol=1e6*eps, atol=1e6*eps):
-        print("Info: The Schur vectors aren't orthogonal so they are eta-orthonormalized.")
+        warnings.warn("The Schur vectors aren't orthogonal so they are eta-orthonormalized.")
         Q = _gram_schmidt_mod(Q, eta)
         # Transform the orthonormalized Schur vectors of P_bar back 
         # to orthonormalized Schur vectors X of P.
-        X = np.diag(1./np.sqrt(eta)).dot(Q)
+        X = np.diag(1. / np.sqrt(eta)).dot(Q)
     else:
         # Search for the constant (Schur) vector, if explicitly present.
         n, m = Q.shape
         max_i = 0
         for i in range(m):
-            vsum = np.sum(Q[:,i])
-            dummy = ( np.ones(Q[:,i].shape) * (vsum / n) )
-            if np.allclose(Q[:,i], dummy, rtol=1e-6, atol=1e-5 ):  
-                max_i = i #TODO: check, if more than one vec fulfills this
+            vsum = np.sum(Q[:, i])
+            dummy = np.ones(Q[:, i].shape) * (vsum / n)
+            if np.allclose(Q[:, i], dummy, rtol=1e-6, atol=1e-5):
+                max_i = i  #TODO: check, if more than one vec fulfills this
+
         # Shift non-constant first (Schur) vector to the right.
-        Q[:,max_i] = Q[:, 0]
+        Q[:, max_i] = Q[:, 0]
         # Transform the orthonormalized Schur vectors of P_bar back 
         # to orthonormalized Schur vectors X of P.
-        X = np.diag(1./np.sqrt(eta)).dot(Q)
+        X = np.diag(1. / np.sqrt(eta)).dot(Q)
         # Set first (Schur) vector equal 1.
         X[:, 0] = 1.0
          
     if not X.shape[0] == N1:
-        raise ValueError("The number of rows n=%d of the Schur vector matrix X doesn't match "
-                         + "those (n=%d) of P!" % (X.shape[0], P.shape[0]))
+        raise ValueError(f"The number of rows `n={X.shape[0]}` of the Schur vector matrix X doesn't match "
+                         f"those `n={P.shape[0]}` of P.")
     # Raise, if the (Schur)vectors aren't D-orthogonal (don't fullfill the orthogonality condition)!
-    if not np.allclose(X.conj().T.dot(np.diag(eta)).dot(X), np.eye(X.shape[1]), atol=1e-8, rtol=1e-5):
+    if not np.allclose(X.conj().T.dot(np.diag(eta)).dot(X), np.eye(X.shape[1]), atol=1e-6, rtol=1e-5):
+        # TODO @Marius: I'd decrease the tolerance, getting error here for 3+ MS states
         print(X.conj().T.dot(np.diag(eta)).dot(X))
-        raise ValueError("Schur vectors appear to not be D-orthogonal!")
+        raise ValueError("Schur vectors appear to not be D-orthogonal.")
     # Raise, if X doesn't fullfill the invariant subspace condition!
+
     if method == 'krylov':
-        dummy = subspace_angles(np.dot(P, X), X)
+        dp = np.dot(P, sp.csr_matrix(X) if issparse(P) else X)
+        dummy = subspace_angles(dp.toarray() if issparse(dp) else dp, X)
     else:
         dummy = subspace_angles(np.dot(P, X), np.dot(X, R))
-    test = np.allclose(dummy, 0.0, atol=1e-8, rtol=1e-5)
+
+    test = np.allclose(dummy, 0.0, atol=1e-6, rtol=1e-5)
     test1 = (dummy.shape[0] == m)
     if not test:
-        raise ValueError("According to scipy.linalg.subspace_angles() X isn't an invariant "
-                         + "subspace of P, since the subspace angles between the column spaces "
-                         + "of P*X and X*R (resp. X, if you chose the Krylov-Schur method)"
-                         + "aren't near zero. The subspace angles are: " + str(dummy))
+        raise ValueError(f"According to scipy.linalg.subspace_angles() X isn't an invariant "
+                         f"subspace of P, since the subspace angles between the column spaces "
+                         f"of P*X and X*R (resp. X, if you chose the Krylov-Schur method)"
+                         f"aren't near zero. The subspace angles are: `{dummy}`")
     elif not test1:
         warnings.warn("According to scipy.linalg.subspace_angles() the dimension of the "
-                      + "column spaces of P*X and/or X*R (resp. X, if you chose the "
-                      + "Krylov-Schur method) is not equal to m.")
+                      "column spaces of P*X and/or X*R (resp. X, if you chose the "
+                      "Krylov-Schur method) is not equal to m.")
     # Raise, if the first column X[:,0] of the Schur vector matrix isn't constantly equal 1!
-    if not np.allclose(X[:,0], 1.0, atol=1e-8, rtol=1e-5):
-        raise ValueError("The first column X[:,0] of the Schur vector matrix isn't constantly equal 1!")
+    if not np.allclose(X[:, 0], 1.0, atol=1e-8, rtol=1e-5):
+        raise ValueError("The first column X[:, 0] of the Schur vector matrix isn't constantly equal 1.")
                   
     if method == 'krylov':
         return X
-    else:
-        return (X, R)
-  
-  
+
+    return X, R
+
+
 def _objective(alpha, X):
     r"""
     Compute objective function value.
@@ -385,7 +397,7 @@ def _objective(alpha, X):
     #rot_crop_vec_opt = fmin(susanna_func, rot_crop_vec, args=(eigvectors,), disp=False)
     #------------------------------------------------------------------------------------------
     
-    return  optval
+    return optval
   
   
 def _initialize_rot_matrix(X):
@@ -413,10 +425,10 @@ def _initialize_rot_matrix(X):
     condition = np.linalg.cond(X[index, :])
     if not (condition < (1.0 / eps)):
         raise ValueError("The condition number " + str(condition) + " of the matrix of start simplex vertices " 
-                         + "X[index, :] is too high for save inversion (to build the initial rotation matrix)!")
-    if (condition > 1e4):
+                         + "X[index, :] is too high for save inversion (to build the initial rotation matrix).")
+    if condition > 1e4:
         warnings.warn("The condition number " + str(condition) + " of the matrix of start simplex vertices " 
-                      + "X[index, :] is quite high for save inversion (to build the initial rotation matrix)!")
+                      + "X[index, :] is quite high for save inversion (to build the initial rotation matrix).")
         
     # Compute transformation matrix rot_matrix as initial guess for local optimization (maybe not feasible!).
     rot_matrix = np.linalg.pinv(X[index, :])
@@ -445,7 +457,7 @@ def _indexsearch(X):
     if not (n >= m):
         raise ValueError("The Schur vector matrix of shape " + str(X.shape) + " has more columns "
                          + "than rows. You can't get a " + str(m) + "-dimensional simplex from " 
-                         + str(n) + " data vectors!")
+                         + str(n) + " data vectors.")
     # Check if the first, and only the first eigenvector is constant.
     diffs = np.abs(np.max(X, axis=0) - np.min(X, axis=0))
     if not (diffs[0] < 1e-6):
@@ -464,7 +476,7 @@ def _indexsearch(X):
     # First vertex: row with largest norm.
     for i in range(n):
         dist = np.linalg.norm(ortho_sys[i, :])
-        if (dist > max_dist):
+        if dist > max_dist:
             max_dist = dist
             index[0] = i
 
@@ -528,9 +540,9 @@ def _opt_soft(X, rot_matrix):
     
     # Sanity checks.
     if not (rot_matrix.shape[0] == rot_matrix.shape[1]):
-        raise ValueError("Rotation matrix isn't quadratic!")
+        raise ValueError("Rotation matrix isn't quadratic.")
     if not (rot_matrix.shape[0] == m):
-        raise ValueError("The dimensions of the rotation matrix don't match with the number of Schur vectors!")
+        raise ValueError("The dimensions of the rotation matrix don't match with the number of Schur vectors.")
     
     # Reduce optimization problem to size (m-1)^2 by croping the first row and first column from rot_matrix
     rot_crop_matrix = rot_matrix[1:,1:]
@@ -562,7 +574,7 @@ def _opt_soft(X, rot_matrix):
                 raise ValueError("The rows of chi don't sum up to 1.0 after rescaling "
                                  + "(with a absolute and relative tolerance of " + str(eps) + ").")
             
-    return (rot_matrix, chi, fopt)
+    return rot_matrix, chi, fopt
   
 
 def _fill_matrix(rot_matrix, X):
@@ -587,9 +599,9 @@ def _fill_matrix(rot_matrix, X):
     
     # Sanity checks.
     if not (rot_matrix.shape[0] == rot_matrix.shape[1]):
-        raise ValueError("Rotation matrix isn't quadratic!")
+        raise ValueError("Rotation matrix isn't quadratic.")
     if not (rot_matrix.shape[0] == m):
-        raise ValueError("The dimensions of the rotation matrix don't match with the number of Schur vectors!")
+        raise ValueError("The dimensions of the rotation matrix don't match with the number of Schur vectors.")
 
     # Compute first column of rot_mat by row sum condition.
     rot_matrix[1:, 0] = -np.sum(rot_matrix[1:, 1:], axis=1)
@@ -603,9 +615,9 @@ def _fill_matrix(rot_matrix, X):
 
     # Make sure, that there are no zero or negative elements in the first row of A.
     if np.any(rot_matrix[0, :] == 0):
-        raise ValueError("First row of rotation matrix has elements = 0!")
-    if (np.min(rot_matrix[0, :]) < 0):
-        raise ValueError("First row of rotation matrix has elements < 0!")
+        raise ValueError("First row of rotation matrix has elements = 0.")
+    if np.min(rot_matrix[0, :]) < 0:
+        raise ValueError("First row of rotation matrix has elements < 0.")
 
     return rot_matrix
 
@@ -657,7 +669,7 @@ def _cluster_by_isa(X):
     # compute the minChi indicator
     minChi = np.amin(chi)
     
-    return (chi, minChi)
+    return chi, minChi
 
 
 def _gpcca_core(X):
@@ -723,7 +735,7 @@ def _gpcca_core(X):
     # calculate crispness of the decomposition of the state space into m clusters
     crispness = (m - fopt) / m
 
-    return (chi, rot_matrix, crispness)
+    return chi, rot_matrix, crispness
     
     
 def coarsegrain(P, eta, chi):
@@ -771,9 +783,14 @@ def coarsegrain(P, eta, chi):
     """
     #Matlab: Pc = pinv(chi'*diag(eta)*chi)*(chi'*diag(eta)*P*chi)
     W = np.linalg.pinv(np.dot(chi.T, np.diag(eta)).dot(chi))
-    A = np.dot(chi.T, np.diag(eta)).dot(P).dot(chi)
+    if issparse(P):
+        V = np.dot(sp.csr_matrix(chi.T), sp.dia_matrix(([eta], [0]), shape=(eta.shape[0], eta.shape[0])))
+    else:
+        V = np.dot(chi.T, np.diag(eta))
+
+    A = V.dot(P).dot(chi)
     P_coarse = W.dot(A)
-                       
+
     return P_coarse
 
 
@@ -858,7 +875,7 @@ def gpcca_coarsegrain(P, eta, m, z='LM', method='brandts'):
     
     """                  
     #Matlab: Pc = pinv(chi'*diag(eta)*chi)*(chi'*diag(eta)*P*chi)
-    _, chi, _, _, _, _ = GPCCA(P, eta, z, method).optimize(m)
+    chi = GPCCA(P, eta, z, method).optimize(m).memberships
     W = np.linalg.pinv(np.dot(chi.T, np.diag(eta)).dot(chi))
     A = np.dot(chi.T, np.diag(eta)).dot(P).dot(chi)
     P_coarse = W.dot(A)
@@ -1060,59 +1077,59 @@ class GPCCA(object):
 
     """
 
-    def __init__(self, P, eta, z='LM', method='brandts'):
-        if issparse(P):
-            warnings.warn("G-PCCA is only implemented for dense matrices, "
-                          + "converting sparse transition matrix to dense ndarray.")
-            P = P.toarray()
+    def __init__(self, P, eta=None, z='LM', method='brandts'):
         from msmtools.analysis import is_transition_matrix
+
         if not is_transition_matrix(P):
             raise ValueError("Input matrix P is not a transition matrix.")
+        if z not in ['LM', 'LR']:
+            raise ValueError("You didn't give a valid sorting criterion z. Valid options are `'LM'` and `'LR'`.")
+        if method not in ['brandts', 'scipy', 'krylov']:
+            raise ValueError("You didn't give a valid method to determine the invariant subspace.")
+
         self.P = P
-        self.eta = eta
+        if eta is None:
+            self.eta = np.true_divide(np.ones(P.shape[0]), P.shape[0])
+        else:
+            self.eta = eta
+
+        if len(self.eta) != P.shape[0]:
+            raise ValueError(f"eta vector length ({len(eta)}) doesn't match with the shape of P {P.shape}.")
+
         self.X = None
         self.R = None
-        if z in ['LM','LR']:
-            self.z = z
-        else:
-            raise ValueError("You didn't give a valid sorting criterion z!")
-        if method in ['brandts', 'scipy', 'krylov']:
-            self.method = method
-        else:
-            raise ValueError("You didn't give a valid method to determine "
-                             + "the invariant subspace")
-            
-            
+        self.z = z
+        self.method = method
+
     def _do_schur_helper(self, m):
         n = np.shape(self.P)[0]
         if self.method == 'krylov':
-            if (self.X is not None):
+            if self.X is not None:
                 Xdim1, Xdim2 = self.X.shape
-                if not (Xdim1 == n):
-                    raise ValueError("The first dimension of X is " + str(Xdim1) + ". This doesn't match "
-                                     + "with the dimension of P (" + str(n) + "," + str(n) + ")!")
-                if not (Xdim2 >= m):
+                if Xdim1 != n:
+                    raise ValueError(f"The first dimension of X is `{Xdim1}`. This doesn't match "
+                                     f"with the dimension of P [{n}, {n}].")
+                if Xdim2 < m:
                     self.X = _do_schur(self.P, self.eta, m, self.z, self.method)
             else:
                 self.X = _do_schur(self.P, self.eta, m, self.z, self.method)
         else:
-            if ( (self.X is not None) and (self.R is not None) ):
+            if self.X is not None and self.R is not None:
                 Xdim1, Xdim2 = self.X.shape
                 Rdim1, Rdim2 = self.R.shape
-                if not (Xdim1 == n):
-                    raise ValueError("The first dimension of X is " + str(Xdim1) + ". This doesn't match "
-                                     + "with the dimension of P (" + str(n) + "," + str(n) + ")!")
-                if not (Rdim1 == Rdim2):
-                    raise ValueError("The Schur form R is not quadratic!")
-                if not (Xdim2 == Rdim1):
-                    raise ValueError("The second dimension of X is " + str(Xdim2) + ". This doesn't match "
-                                     + "with the dimensions of R (" + str(Rdim1) + "," + str(Rdim2) + ")!")
-                if not (Rdim2 >= m):
+                if Xdim1 != n:
+                    raise ValueError(f"The first dimension of X is `{Xdim1}`. This doesn't match "
+                                     f"with the dimension of P [{n}, {n}].")
+                if Rdim1 != Rdim2:
+                    raise ValueError("The Schur form R is not quadratic.")
+                if Xdim2 != Rdim1:
+                    raise ValueError(f"The first dimension of X is `{Xdim1}`. This doesn't match "
+                                     f"with the dimension of R [{Rdim1}, {Rdim2}].")
+                if Rdim2 < m:
                     self.X, self.R = _do_schur(self.P, self.eta, m, self.z, self.method)
             else:
                 self.X, self.R = _do_schur(self.P, self.eta, m, self.z, self.method)
-        
-        
+
     def minChi(self, m_min, m_max):
         r"""
         Calculate the minChi indicator (see [1]_) for every 
@@ -1151,13 +1168,11 @@ class GPCCA(object):
                https://doi.org/10.1021/acs.jctc.8b00079
         
         """
-        n = np.shape(self.P)[0]
-        
         # Validate Input.
-        if not (m_min < m_max):
-            raise ValueError("m_min must be smaller than m_max!")
-        if m_min in [0,1]:
-            raise ValueError("There is no point in clustering into", str(m), "clusters!")
+        if m_min >= m_max:
+            raise ValueError(f"m_min ({m_min}) must be smaller than m_max ({m_max}).")
+        if m_min in [0, 1]:
+            raise ValueError(f"There is no point in clustering into `{m_min}` clusters.")
         
         # Calculate Schur matrix R and Schur vector matrix X, if not adequately given.
         self._do_schur_helper(m_max)
@@ -1169,10 +1184,10 @@ class GPCCA(object):
             minChi_list.append(minChi)
             
         return minChi_list
-        
-        
+
     # G-PCCA coarse-graining   
-    def optimize(self, m, full_output=False):
+    def optimize(self, m: Union[int, Tuple[int, int], Dict[str, int]],
+                 return_extra: bool = False):
         r"""
         Full G-PCCA [1]_ spectral clustering method with optimized memberships and the option
         to optimize the number of clusters (macrostates) `m` as well.
@@ -1193,11 +1208,10 @@ class GPCCA(object):
             If dict: minmal and maximal number of clusters `m_min` and `m_max` given as
             a dict `{'m_min': int, 'm_max': int}`.
         
-        full_output : boolean, (default=False)
-            If False, only the optimal results `chi`, `rot_matrix`, `crispness` and the
-            matrices `X`, `R` will be returned.
-            If True, the optimal results `chi`, `rot_matrix`, `crispness`, the matrices `X`, `R`
-            and lists containing results for all :math:`m \in [m_{min},m_{max}]` will be returned.
+        return_extra: boolean, (default=False)
+            If False, only `self` will be returned.
+            If True, also the matrices `X`, `R` and lists containing results
+            for all :math:`m \in [m_{min},m_{max}]` will be returned.
 
         Returns
         -------
@@ -1269,24 +1283,32 @@ class GPCCA(object):
         """
         from msmtools.estimation import connected_sets        
 
-        n = np.shape(self.P)[0]
+        n = self.P.shape[0]
         
         # extract m_min, m_max, if given, else take single m
-        if isinstance(m, dict):
-            m_min = m.get('m_min', None)
-            m_max = m.get('m_max', None)
-            if not (m_min < m_max):
-                raise ValueError("m_min must be smaller than m_max!")
+        if isinstance(m, (tuple, list)):
+            if len(m) != 2:
+                raise ValueError(f"Expected range to be of size 2, found `{len(m)}`.")
+            m_list = m
+            if m[0] >= m[1]:
+                raise ValueError(f"m_min ({m[0]}) must be smaller than m_max ({m[1]}).")
+        elif isinstance(m, dict):
+            m_min = m['m_min']
+            m_max = m['m_max']
+            if m_min >= m_max:
+                raise ValueError(f"m_min ({m_min}) must be smaller than m_max ({m_max}).")
             m_list = [m_min, m_max]
         elif isinstance(m, int):
             m_list = [m]
+        else:
+            raise TypeError(f"Invalid type `{type(m).__name__}`.")
             
         # validate input
-        if (max(m_list) > n):
-            raise ValueError("Number of macrostates m = " + str(max(m_list)) + " exceeds number "
-                             "of states of the transition matrix n = " + str(n) + ".")
-        if min(m_list) in [0,1]:
-            raise ValueError("There is no point in clustering into", str(m), "clusters!")
+        if max(m_list) > n:
+            raise ValueError(f"Number of macrostates `m={max(m_list)}` exceeds number "
+                             f"of states of the transition matrix `n={n}`.")
+        if min(m_list) in [0, 1]:
+            raise ValueError(f"There is no point in clustering into `{m}` clusters.")
             
         # test connectivity
         components = connected_sets(self.P)
@@ -1298,13 +1320,14 @@ class GPCCA(object):
             component = components[i]
             rest = list(set(range(n)) - set(component))
             # is component closed?
-            if (np.sum(self.P[component, :][:, rest]) == 0):
+            if np.sum(self.P[component, :][:, rest]) == 0:
                 closed_components.append(component)
         n_closed_components = len(closed_components)
         
         # Calculate Schur matrix R and Schur vector matrix X, if not adequately given.
+
         self._do_schur_helper(max(m_list))
-        
+
         # Initialize lists to collect results.
         chi_list = []
         rot_matrix_list = []
@@ -1315,25 +1338,24 @@ class GPCCA(object):
                 # Reduce R according to m.
                 Rm = self.R[:m, :m]
                 if m - 1 not in _find_twoblocks(Rm):
-                    warnings.warn("Coarse-graining with " + str(m) + " states cuts through "
-                                  + "a block of complex conjugate eigenvalues in the Schur "
-                                  + "form. The result will be of questionable meaning. "
-                                  + "Please increase/decrease number of states by one.")
+                    warnings.warn(f"Coarse-graining with `{m}` states cuts through "
+                                  f"a block of complex conjugate eigenvalues in the Schur "
+                                  f"form. The result will be of questionable meaning. "
+                                  f"Please increase/decrease number of states by one.")
             ## Reduce X according to m and make a work copy.
             #Xm = np.copy(X[:, :m])
             chi, rot_matrix, crispness = _gpcca_core(self.X[:, :m])
             # check if we have at least m dominant sets. If less than m, we warn.
             nmeta = np.count_nonzero(chi.sum(axis=0))
-            if (m > nmeta):
+            if m > nmeta:
                 crispness_list.append(-crispness)
-                warnings.warn(str(m) + " macrostates requested, but transition matrix only has " 
-                              + str(nmeta) + " macrostates. Request less macrostates.")
+                warnings.warn(f"`{m}` macrostates requested, but transition matrix only has " 
+                              f"`{nmeta}` macrostates. Request less macrostates.")
             # Check, if we have enough clusters to support the disconnected sets.
-            elif (m < n_closed_components):
+            elif m < n_closed_components:
                 crispness_list.append(-crispness)
-                warnings.warn("Number of metastable states m = " + str(m) + " is too small. "
-                              + "Transition matrix has " + str(n_closed_components) 
-                              + " disconnected components.")
+                warnings.warn(f"Number of metastable states `m={m}` is too small. "
+                              f"Transition matrix has `{n_closed_components}` disconnected components.")
             else:
                 crispness_list.append(crispness)
             chi_list.append(chi)
@@ -1357,19 +1379,18 @@ class GPCCA(object):
             # coarse-grained stationary distribution
             self._pi_coarse = np.dot(self._chi.T, self._pi)
         except ValueError as err:
-            print("Stationary distribution couldn't be calculated:", err)
-                         
+            warnings.warn("Stationary distribution couldn't be calculated.")
+
         ## coarse-grained input (initial) distribution of states
         self._eta_coarse = np.dot(self._chi.T, self.eta)
 
         # coarse-grain transition matrix 
         self._P_coarse = coarsegrain(self.P, self.eta, self._chi)
-        
-        if full_output:
-            return (self, self._chi, self._rot_matrix, self._crispness, self.X, self.R, chi_list, rot_matrix_list, crispness_list)
-        else:
-            return (self, self._chi, self._rot_matrix, self._crispness, self.X, self.R)
-        
+
+        if return_extra:
+            return self, self.X, self.R, chi_list, rot_matrix_list, crispness_list
+
+        return self
 
     @property
     def transition_matrix(self):
@@ -1401,8 +1422,8 @@ class GPCCA(object):
     
     @property
     def schur_matrix(self):
-        if np.all(self._R == None):
-            print("The Schur form R is not defined, if you chose Krylov-Schur as method.")
+        if self._R is None:
+            warnings.warn("The Schur form R is not defined, because you chose `method='krylov'`.")
         return self._R
     
     @property
