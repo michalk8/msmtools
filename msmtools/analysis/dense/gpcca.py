@@ -574,9 +574,8 @@ def _opt_soft(X, rot_matrix):
         else:
             chi[chi < 0.0] = 0.0
             chi = np.diag(np.true_divide(1.0, np.sum(chi, axis=1))).dot(chi)
-            if not np.allclose(np.sum(chi, axis=1), 1.0, rtol=eps, atol=eps):
-                raise ValueError("The rows of chi don't sum up to 1.0 after rescaling "
-                                 + "(with a absolute and relative tolerance of " + str(eps) + ").")
+            if not np.allclose(np.sum(chi, axis=1), 1.0, atol=1e-8, rtol=1e-5):
+                raise ValueError("The rows of chi don't sum up to 1.0 after rescaling")
             
     return rot_matrix, chi, fopt
   
