@@ -161,7 +161,7 @@ def _gram_schmidt_mod(X, eta):
     return Q
 
 
-def _do_schur(P, eta, m, z='LM', method='brandts'):
+def _do_schur(P, eta, m, z='LM', method='brandts', tol_krylov=1e-8):
     r"""
     This function performs a Schur decomposition of the (n,n) transition matrix `P`, with due regard 
     to the input (initial) distribution of states `eta` (which can be the stationary distribution ``pi``,
@@ -205,6 +205,10 @@ def _do_schur(P, eta, m, z='LM', method='brandts'):
         'scipy': Perform a full Schur decomposition of `P` while
          sorting up `m` (`m` < `n`) dominant eigenvalues 
          (and associated Schur vectors) at the same time.
+
+    tol_krylov : float, (default=1e-8)
+        Confergence criterion used by SLEPc internally. This is only relevant if you use method=`krylov`. If you are
+        dealing with ill conditioned matrices, consider decreasing this value to get accurate results.
         
     Returns
     -------
@@ -247,9 +251,9 @@ def _do_schur(P, eta, m, z='LM', method='brandts'):
 
     # Make a Schur decomposition of P_bar and sort the Schur vectors (and form).
     if method == 'krylov':
-        Q = sorted_schur(P_bar, m, z, method) #Pbar!!!
+        Q = sorted_schur(P_bar, m, z, method, tol_krylov=tol_krylov) #Pbar!!!
     else:
-        R, Q = sorted_schur(P_bar, m, z, method) #Pbar!!!
+        R, Q = sorted_schur(P_bar, m, z, method, tol_krylov=tol_krylov) #Pbar!!!
         if m - 1 not in _find_twoblocks(R): #TODO: Rethink this, mb only for stuff sorted with brandts...
             warnings.warn("Coarse-graining with " + str(m) + " states cuts through "
                           + "a block of complex conjugate eigenvalues in the Schur "
@@ -953,6 +957,10 @@ class GPCCA(object):
          but this doesn't matter if the installer finally tells you
          ``Successfully installed [package name here]``.
          ------------------------------------------------------
+
+    tol_krylov : float, (default=1e-8)
+        Confergence criterion used by SLEPc internally. This is only relevant if you use method=`krylov`. If you are
+        dealing with ill conditioned matrices, consider decreasing this value to get accurate results.
         
     Properties
     ----------
@@ -1105,6 +1113,7 @@ class GPCCA(object):
         self.R = None
         self.z = z
         self.method = method
+        self.tol_krylov = tol_krylov
 
     def _do_schur_helper(self, m):
         n = np.shape(self.P)[0]
@@ -1115,9 +1124,9 @@ class GPCCA(object):
                     raise ValueError(f"The first dimension of X is `{Xdim1}`. This doesn't match "
                                      f"with the dimension of P [{n}, {n}].")
                 if Xdim2 < m:
-                    self.X = _do_schur(self.P, self.eta, m, self.z, self.method)
+                    self.X = _do_schur(self.P, self.eta, m, self.z, self.method, self.tol_krylov)
             else:
-                self.X = _do_schur(self.P, self.eta, m, self.z, self.method)
+                self.X = _do_schur(self.P, self.eta, m, self.z, self.method, self.tol_krylov)
         else:
             if self.X is not None and self.R is not None:
                 Xdim1, Xdim2 = self.X.shape
@@ -1131,9 +1140,9 @@ class GPCCA(object):
                     raise ValueError(f"The first dimension of X is `{Xdim1}`. This doesn't match "
                                      f"with the dimension of R [{Rdim1}, {Rdim2}].")
                 if Rdim2 < m:
-                    self.X, self.R = _do_schur(self.P, self.eta, m, self.z, self.method)
+                    self.X, self.R = _do_schur(self.P, self.eta, m, self.z, self.method, self.tol_krylov)
             else:
-                self.X, self.R = _do_schur(self.P, self.eta, m, self.z, self.method)
+                self.X, self.R = _do_schur(self.P, self.eta, m, self.z, self.method, self.tol_krylov)
 
     def minChi(self, m_min, m_max):
         r"""

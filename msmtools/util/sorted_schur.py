@@ -43,9 +43,9 @@ def top_eigenvalues(P, m, z='LM', tol=1e-8):
         'LM': the m eigenvalues with the largest magnitude are sorted up.
         'LR': the m eigenvalues with the largest real part are sorted up.
 
-    tol : float, (default='1e-8')
+    tol : float, (default=1e-8)
         Confergence criterion used by SLEPc internally. If you are dealing with ill
-        conditioned matrices, consider decreasing this value to get acccurate results.
+        conditioned matrices, consider decreasing this value to get accurate results.
         
     """    
     n = P.shape[0]
@@ -140,9 +140,9 @@ def smallest_eigenvalue(P, z='SM', tol=1e-8):
         'SM': eigenvalue with the smallest magnitude.
         'SR': eigenvalue with the smallest real part.
 
-    tol : float, (default='1e-8')
+    tol : float, (default=1e-8)
         Confergence criterion used by SLEPc internally. If you are dealing with ill
-        conditioned matrices, consider decreasing this value to get acccurate results.
+        conditioned matrices, consider decreasing this value to get accurate results.
         
     """    
     from petsc4py import PETSc
@@ -311,9 +311,9 @@ def sorted_krylov_schur(P, m, z='LM', tol=1e-8):
         'LM': Largest magnitude (default).
         'LR': Largest real parts.
 
-    tol : float, (default='1e-8')
+    tol : float, (default=1e-8)
         Confergence criterion used by SLEPc internally. If you are dealing with ill
-        conditioned matrices, consider decreasing this value to get acccurate results.
+        conditioned matrices, consider decreasing this value to get accurate results.
         
     """
     from petsc4py import PETSc
@@ -478,9 +478,9 @@ def sorted_schur(P, m, z='LM', method='brandts', tol_krylov=1e-8):
          sorting up `m` (`m` < `n`) dominant eigenvalues 
          (and associated Schur vectors) at the same time.
 
-    tol : float, (default='1e-8')
+    tol_krylov : float, (default=1e-8)
         Confergence criterion used by SLEPc internally. This is only relevant if you use method=`krylov`. If you are
-        dealing with ill conditioned matrices, consider decreasing this value to get acccurate results.
+        dealing with ill conditioned matrices, consider decreasing this value to get accurate results.
         
     """
     if method == 'krylov':
