@@ -1085,7 +1085,7 @@ class GPCCA(object):
 
     """
 
-    def __init__(self, P, eta=None, z='LM', method='brandts'):
+    def __init__(self, P, eta=None, z='LM', method='brandts', tol_krylov=1e-8):
         from msmtools.analysis import is_transition_matrix
 
         if not is_transition_matrix(P):
