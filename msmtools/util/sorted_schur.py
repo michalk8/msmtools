@@ -22,7 +22,7 @@ def _initialize_matrix(M, P):
         M.createDense(list(np.shape(P)), array=P)
 
 
-def top_eigenvalues(P, m, z='LM'):
+def top_eigenvalues(P, m, z='LM', tol=1e-8):
     r"""
     Sort `m+1` (if ``m < n``) or `m` (if ``m == n``) dominant eigenvalues 
     up and check (if ``m < n``), if clustering into `m` clusters would split 
@@ -42,6 +42,10 @@ def top_eigenvalues(P, m, z='LM'):
         Options are:
         'LM': the m eigenvalues with the largest magnitude are sorted up.
         'LR': the m eigenvalues with the largest real part are sorted up.
+
+    tol : float, (default='1e-8')
+        Confergence criterion used by SLEPc internally. If you are dealing with ill
+        conditioned matrices, consider decreasing this value to get acccurate results.
         
     """    
     n = P.shape[0]
@@ -81,6 +85,8 @@ def top_eigenvalues(P, m, z='LM'):
     E.setType(SLEPc.EPS.Type.KRYLOVSCHUR)
     # Set the number of eigenvalues to compute and the dimension of the subspace.
     E.setDimensions(nev=k)
+    # set the tolerance used in the convergence criterion
+    E.setTolerances(tol=tol)
     if z == 'LM':
         E.setWhichEigenpairs(E.Which.LARGEST_MAGNITUDE)
     elif z == 'LR':
@@ -120,7 +126,7 @@ def top_eigenvalues(P, m, z='LM'):
     return top_eigenvals, block_split
 
 
-def smallest_eigenvalue(P, z='SM'):
+def smallest_eigenvalue(P, z='SM', tol=1e-8):
     r"""
     Find the smallest eigenvalue according to an selectable criterion.
     
@@ -133,6 +139,10 @@ def smallest_eigenvalue(P, z='SM'):
         Options are:
         'SM': eigenvalue with the smallest magnitude.
         'SR': eigenvalue with the smallest real part.
+
+    tol : float, (default='1e-8')
+        Confergence criterion used by SLEPc internally. If you are dealing with ill
+        conditioned matrices, consider decreasing this value to get acccurate results.
         
     """    
     from petsc4py import PETSc
@@ -149,6 +159,9 @@ def smallest_eigenvalue(P, z='SM'):
     E.setType(SLEPc.EPS.Type.KRYLOVSCHUR)
     # Set the number of eigenvalues to compute and the dimension of the subspace.
     E.setDimensions(nev=1)
+    # set the tolerance used in the convergence criterion
+    E.setTolerances(tol=tol)
+
     if z == 'SM':
         E.setWhichEigenpairs(E.Which.SMALLEST_MAGNITUDE)
     elif z == 'SR':
@@ -258,7 +271,7 @@ def sorted_scipy_schur(P, m, z='LM'):
     return (R, Q)
 
 
-def sorted_krylov_schur(P, m, z='LM'):
+def sorted_krylov_schur(P, m, z='LM', tol=1e-8):
     r"""
     Calculate an orthonormal basis of the subspace associated with the `m`
     dominant eigenvalues of `P` using the Krylov-Schur method as implemented
@@ -297,6 +310,10 @@ def sorted_krylov_schur(P, m, z='LM'):
         Options are:
         'LM': Largest magnitude (default).
         'LR': Largest real parts.
+
+    tol : float, (default='1e-8')
+        Confergence criterion used by SLEPc internally. If you are dealing with ill
+        conditioned matrices, consider decreasing this value to get acccurate results.
         
     """
     from petsc4py import PETSc
@@ -337,6 +354,9 @@ def sorted_krylov_schur(P, m, z='LM'):
     # TARGET_IMAGINARY: Imaginary part closest to target.
     # ALL: All eigenvalues in an interval.
     # USER: User defined ordering.
+
+    # set the tolerance used in the convergence criterion
+    E.setTolerances(tol=tol)
     if z == 'LM':
         E.setWhichEigenpairs(E.Which.LARGEST_MAGNITUDE)
     elif z == 'LR':
@@ -422,7 +442,7 @@ def sorted_krylov_schur(P, m, z='LM'):
     return Q, top_eigenvals, top_eigenvals_error
 
 
-def sorted_schur(P, m, z='LM', method='brandts'):
+def sorted_schur(P, m, z='LM', method='brandts', tol_krylov=1e-8):
     r"""
     Return `m` dominant real Schur vectors or an orthonormal basis
     spanning the same invariant subspace, utilizing selectable methods
@@ -457,6 +477,10 @@ def sorted_schur(P, m, z='LM', method='brandts'):
         'scipy': Perform a full Schur decomposition of `P` while
          sorting up `m` (`m` < `n`) dominant eigenvalues 
          (and associated Schur vectors) at the same time.
+
+    tol : float, (default='1e-8')
+        Confergence criterion used by SLEPc internally. This is only relevant if you use method=`krylov`. If you are
+        dealing with ill conditioned matrices, consider decreasing this value to get acccurate results.
         
     """
     if method == 'krylov':
@@ -480,7 +504,7 @@ def sorted_schur(P, m, z='LM', method='brandts'):
         # Calculate the top m+1 eigenvalues and secure that you
         # don't separate conjugate eigenvalues (corresponding to 2x2-block in R),
         # if you take the dominant m eigenvalues to cluster the data.
-        _ = top_eigenvalues(P, m, z=z)
+        _ = top_eigenvalues(P, m, z=z, tol=tol_krylov)
    
         # Make a Schur decomposition of P.
         R, Q = schur(P, output='real')
@@ -493,7 +517,7 @@ def sorted_schur(P, m, z='LM', method='brandts'):
     elif method == 'scipy':
         R, Q = sorted_scipy_schur(P, m, z=z)
     elif method == 'krylov':
-        Q, _, _ = sorted_krylov_schur(P, m, z=z)
+        Q, _, _ = sorted_krylov_schur(P, m, z=z, tol=tol_krylov)
     else:
         raise ValueError(f"Unknown method `{method!r}`.")
        
