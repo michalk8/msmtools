@@ -322,7 +322,7 @@ def sorted_krylov_schur(P, m, z='LM', tol=1e-8):
     # Calculate the top m+1 eigenvalues and secure that you
     # don't separate conjugate eigenvalues (corresponding to 2x2-block in R),
     # if you take the dominant m eigenvalues to cluster the data.
-    top_eigenvals, block_split = top_eigenvalues(P, m, z=z)
+    top_eigenvals, block_split = top_eigenvalues(P, m, z=z, tol=tol)
     
     if block_split:
         raise ValueError(f"Clustering P into `{m}` clusters will split "
