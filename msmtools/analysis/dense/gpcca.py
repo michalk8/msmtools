@@ -161,7 +161,7 @@ def _gram_schmidt_mod(X, eta):
     return Q
 
 
-def _do_schur(P, eta, m, z='LM', method='brandts', tol_krylov=1e-8):
+def _do_schur(P, eta, m, z='LM', method='brandts', tol_krylov=1e-16):
     r"""
     This function performs a Schur decomposition of the (n,n) transition matrix `P`, with due regard 
     to the input (initial) distribution of states `eta` (which can be the stationary distribution ``pi``,
@@ -957,10 +957,6 @@ class GPCCA(object):
          ``Successfully installed [package name here]``.
          ------------------------------------------------------
 
-    tol_krylov : float, (default=1e-8)
-        Confergence criterion used by SLEPc internally. This is only relevant if you use method=`krylov`. If you are
-        dealing with ill conditioned matrices, consider decreasing this value to get accurate results.
-        
     Properties
     ----------
     
@@ -1084,7 +1080,7 @@ class GPCCA(object):
 
     """
 
-    def __init__(self, P, eta=None, z='LM', method='brandts', tol_krylov=1e-8):
+    def __init__(self, P, eta=None, z='LM', method='brandts'):
         from msmtools.analysis import is_transition_matrix
 
         if not is_transition_matrix(P):
@@ -1112,7 +1108,6 @@ class GPCCA(object):
         self.R = None
         self.z = z
         self.method = method
-        self.tol_krylov = tol_krylov
 
     def _do_schur_helper(self, m):
         n = np.shape(self.P)[0]
@@ -1123,9 +1118,9 @@ class GPCCA(object):
                     raise ValueError(f"The first dimension of X is `{Xdim1}`. This doesn't match "
                                      f"with the dimension of P [{n}, {n}].")
                 if Xdim2 < m:
-                    self.X = _do_schur(self.P, self.eta, m, self.z, self.method, self.tol_krylov)
+                    self.X = _do_schur(self.P, self.eta, m, self.z, self.method)
             else:
-                self.X = _do_schur(self.P, self.eta, m, self.z, self.method, self.tol_krylov)
+                self.X = _do_schur(self.P, self.eta, m, self.z, self.method)
         else:
             if self.X is not None and self.R is not None:
                 Xdim1, Xdim2 = self.X.shape
@@ -1139,9 +1134,9 @@ class GPCCA(object):
                     raise ValueError(f"The first dimension of X is `{Xdim1}`. This doesn't match "
                                      f"with the dimension of R [{Rdim1}, {Rdim2}].")
                 if Rdim2 < m:
-                    self.X, self.R = _do_schur(self.P, self.eta, m, self.z, self.method, self.tol_krylov)
+                    self.X, self.R = _do_schur(self.P, self.eta, m, self.z, self.method)
             else:
-                self.X, self.R = _do_schur(self.P, self.eta, m, self.z, self.method, self.tol_krylov)
+                self.X, self.R = _do_schur(self.P, self.eta, m, self.z, self.method)
 
     def minChi(self, m_min, m_max):
         r"""
