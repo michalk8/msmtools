@@ -206,7 +206,7 @@ def _do_schur(P, eta, m, z='LM', method='brandts', tol_krylov=1e-16):
          sorting up `m` (`m` < `n`) dominant eigenvalues 
          (and associated Schur vectors) at the same time.
 
-    tol_krylov : float, (default=1e-8)
+    tol_krylov : float, (default=1e-16)
         Confergence criterion used by SLEPc internally. This is only relevant if you use method=`krylov`. If you are
         dealing with ill conditioned matrices, consider decreasing this value to get accurate results.
         

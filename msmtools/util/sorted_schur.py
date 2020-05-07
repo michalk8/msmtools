@@ -22,7 +22,7 @@ def _initialize_matrix(M, P):
         M.createDense(list(np.shape(P)), array=P)
 
 
-def top_eigenvalues(P, m, z='LM', tol=1e-8):
+def top_eigenvalues(P, m, z='LM', tol=1e-16):
     r"""
     Sort `m+1` (if ``m < n``) or `m` (if ``m == n``) dominant eigenvalues 
     up and check (if ``m < n``), if clustering into `m` clusters would split 
@@ -43,7 +43,7 @@ def top_eigenvalues(P, m, z='LM', tol=1e-8):
         'LM': the m eigenvalues with the largest magnitude are sorted up.
         'LR': the m eigenvalues with the largest real part are sorted up.
 
-    tol : float, (default=1e-8)
+    tol : float, (default=1e-16)
         Confergence criterion used by SLEPc internally. If you are dealing with ill
         conditioned matrices, consider decreasing this value to get accurate results.
         
@@ -126,7 +126,7 @@ def top_eigenvalues(P, m, z='LM', tol=1e-8):
     return top_eigenvals, block_split
 
 
-def smallest_eigenvalue(P, z='SM', tol=1e-8):
+def smallest_eigenvalue(P, z='SM', tol=1e-16):
     r"""
     Find the smallest eigenvalue according to an selectable criterion.
     
@@ -140,7 +140,7 @@ def smallest_eigenvalue(P, z='SM', tol=1e-8):
         'SM': eigenvalue with the smallest magnitude.
         'SR': eigenvalue with the smallest real part.
 
-    tol : float, (default=1e-8)
+    tol : float, (default=1e-16)
         Confergence criterion used by SLEPc internally. If you are dealing with ill
         conditioned matrices, consider decreasing this value to get accurate results.
         
@@ -271,7 +271,7 @@ def sorted_scipy_schur(P, m, z='LM'):
     return (R, Q)
 
 
-def sorted_krylov_schur(P, m, z='LM', tol=1e-8):
+def sorted_krylov_schur(P, m, z='LM', tol=1e-16):
     r"""
     Calculate an orthonormal basis of the subspace associated with the `m`
     dominant eigenvalues of `P` using the Krylov-Schur method as implemented
@@ -311,7 +311,7 @@ def sorted_krylov_schur(P, m, z='LM', tol=1e-8):
         'LM': Largest magnitude (default).
         'LR': Largest real parts.
 
-    tol : float, (default=1e-8)
+    tol : float, (default=1e-16)
         Confergence criterion used by SLEPc internally. If you are dealing with ill
         conditioned matrices, consider decreasing this value to get accurate results.
         
@@ -442,7 +442,7 @@ def sorted_krylov_schur(P, m, z='LM', tol=1e-8):
     return Q, top_eigenvals, top_eigenvals_error
 
 
-def sorted_schur(P, m, z='LM', method='brandts', tol_krylov=1e-8):
+def sorted_schur(P, m, z='LM', method='brandts', tol_krylov=1e-16):
     r"""
     Return `m` dominant real Schur vectors or an orthonormal basis
     spanning the same invariant subspace, utilizing selectable methods
@@ -478,7 +478,7 @@ def sorted_schur(P, m, z='LM', method='brandts', tol_krylov=1e-8):
          sorting up `m` (`m` < `n`) dominant eigenvalues 
          (and associated Schur vectors) at the same time.
 
-    tol_krylov : float, (default=1e-8)
+    tol_krylov : float, (default=1e-16)
         Confergence criterion used by SLEPc internally. This is only relevant if you use method=`krylov`. If you are
         dealing with ill conditioned matrices, consider decreasing this value to get accurate results.
         
