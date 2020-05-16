@@ -247,16 +247,15 @@ def _do_schur(P, eta, m, z='LM', method='brandts'):
 
     # Make a Schur decomposition of P_bar and sort the Schur vectors (and form).
     R, Q = sorted_schur(P_bar, m, z, method) #Pbar!!!
-    if method != "krylov":
-        if m - 1 not in _find_twoblocks(R): #TODO: Rethink this, mb only for stuff sorted with brandts...
-            warnings.warn("Coarse-graining with " + str(m) + " states cuts through "
-                          + "a block of complex conjugate eigenvalues in the Schur "
-                          + "form. The result will be of questionable meaning. "
-                          + "Please increase/decrease number of states by one.")
-        # Since the Schur form R and Schur vectors are only partially
-        # sorted, one doesn't need the whole R and Schur vector matrix Q.
-        # Take only the sorted Schur form and the vectors belonging to it.
-        R = R[:m, :m]
+    if m - 1 not in _find_twoblocks(R): #TODO: Rethink this, mb only for stuff sorted with brandts...
+        warnings.warn("Coarse-graining with " + str(m) + " states cuts through "
+                      + "a block of complex conjugate eigenvalues in the Schur "
+                      + "form. The result will be of questionable meaning. "
+                      + "Please increase/decrease number of states by one.")
+    # Since the Schur form R and Schur vectors are only partially
+    # sorted, one doesn't need the whole R and Schur vector matrix Q.
+    # Take only the sorted Schur form and the vectors belonging to it.
+    R = R[:m, :m]
 
     Q = Q[:, :m]
     
