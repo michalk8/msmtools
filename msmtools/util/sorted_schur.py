@@ -352,7 +352,11 @@ def sorted_krylov_schur(P, m, z='LM'):
     # WE NEED REAL VECTORS! G-PCCA and PCCA only work with real vectors!!
     # We take the sequence of 1-D arrays and stack them as columns to make a single 2-D array.
     Subspace = np.column_stack([x.array for x in E.getInvariantSubspace()])
-    
+
+    R = E.getDS().getMat(SLEPc.DS.MatType.A)
+    R.view()
+    R = R.getDenseArray().astype(np.float32)
+
     # Raise, if X contains complex values!
     if not np.all(np.isreal(Subspace)):
         raise TypeError("The orthonormal basis of the subspace returned by Krylov-Schur is not real.",
@@ -419,7 +423,7 @@ def sorted_krylov_schur(P, m, z='LM'):
                       "column space of P*Q and/or Q*L is not equal to m (L is a diagonal "
                       "matrix with the sorted top eigenvalues on the diagonal).")
     
-    return Q, top_eigenvals, top_eigenvals_error
+    return R, Q, top_eigenvals, top_eigenvals_error
 
 
 def sorted_schur(P, m, z='LM', method='brandts'):
@@ -493,11 +497,8 @@ def sorted_schur(P, m, z='LM', method='brandts'):
     elif method == 'scipy':
         R, Q = sorted_scipy_schur(P, m, z=z)
     elif method == 'krylov':
-        Q, _, _ = sorted_krylov_schur(P, m, z=z)
+        R, Q, _, _ = sorted_krylov_schur(P, m, z=z)
     else:
         raise ValueError(f"Unknown method `{method!r}`.")
        
-    if method == 'krylov':
-        return Q
-
     return R, Q
