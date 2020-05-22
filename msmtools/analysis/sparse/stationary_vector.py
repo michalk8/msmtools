@@ -141,22 +141,5 @@ def stationary_distribution(T):
 
     """
     mu = stationary_distribution_from_eigenvector(T)
-    # if np.any(mu < 0):  # still? Then set to 0 and renormalize
-    #     mu = np.maximum(mu, 0.0)
-    #     mu /= mu.sum()
-
-    # fallback = False
-    # try:
-    #     mu = stationary_distribution_from_backward_iteration(T)
-    #     if np.any(mu < 0):  # numerical problem, fall back to more robust algorithm.
-    #         fallback=True
-    # except RuntimeError:
-    #     fallback = True
-    #
-    # if fallback:
-    #     mu = stationary_distribution_from_eigenvector(T)
-    #     if np.any(mu < 0):  # still? Then set to 0 and renormalize
-    #         mu = np.maximum(mu, 0.0)
-    #         mu /= mu.sum()
 
     return mu
