@@ -119,7 +119,7 @@ def stationary_distribution_from_eigenvector(T, ncv=None):
 
     """
     vals, vecs = scipy.sparse.linalg.eigs(T.transpose(), k=1, which='LR', ncv=ncv)
-    nu = vecs[:, 0].real
+    nu = np.abs(vecs[:, 0].real)
     mu = nu / np.sum(nu)
     return mu
 
@@ -140,18 +140,23 @@ def stationary_distribution(T):
         Vector of stationary probabilities.
 
     """
-    fallback = False
-    try:
-        mu = stationary_distribution_from_backward_iteration(T)
-        if np.any(mu < 0):  # numerical problem, fall back to more robust algorithm.
-            fallback=True
-    except RuntimeError:
-        fallback = True
+    mu = stationary_distribution_from_eigenvector(T)
+    # if np.any(mu < 0):  # still? Then set to 0 and renormalize
+    #     mu = np.maximum(mu, 0.0)
+    #     mu /= mu.sum()
 
-    if fallback:
-        mu = stationary_distribution_from_eigenvector(T)
-        if np.any(mu < 0):  # still? Then set to 0 and renormalize
-            mu = np.maximum(mu, 0.0)
-            mu /= mu.sum()
+    # fallback = False
+    # try:
+    #     mu = stationary_distribution_from_backward_iteration(T)
+    #     if np.any(mu < 0):  # numerical problem, fall back to more robust algorithm.
+    #         fallback=True
+    # except RuntimeError:
+    #     fallback = True
+    #
+    # if fallback:
+    #     mu = stationary_distribution_from_eigenvector(T)
+    #     if np.any(mu < 0):  # still? Then set to 0 and renormalize
+    #         mu = np.maximum(mu, 0.0)
+    #         mu /= mu.sum()
 
     return mu
