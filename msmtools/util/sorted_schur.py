@@ -479,7 +479,7 @@ def sorted_schur(P, m, z='LM', method='brandts', tol_krylov=1e-16):
          (and associated Schur vectors) at the same time.
 
     tol_krylov : float, (default=1e-16)
-        Confergence criterion used by SLEPc internally. This is only relevant if you use method=`krylov`. If you are
+        Convergence criterion used by SLEPc internally. This is only relevant if you use method=`krylov`. If you are
         dealing with ill conditioned matrices, consider decreasing this value to get accurate results.
         
     """
