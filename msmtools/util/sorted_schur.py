@@ -44,7 +44,7 @@ def top_eigenvalues(P, m, z='LM', tol=1e-16):
         'LR': the m eigenvalues with the largest real part are sorted up.
 
     tol : float, (default=1e-16)
-        Confergence criterion used by SLEPc internally. If you are dealing with ill
+        Convergence criterion used by SLEPc internally. If you are dealing with ill
         conditioned matrices, consider decreasing this value to get accurate results.
         
     """    
