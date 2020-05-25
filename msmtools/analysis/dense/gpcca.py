@@ -202,9 +202,6 @@ def _do_schur(P, eta, m, z='LM', method='brandts', tol_krylov=1e-16):
         'krylov': Calculate an orthonormal basis of the subspace 
          associated with the `m` dominant eigenvalues of `P` 
          using the Krylov-Schur method as implemented in SLEPc.
-        'scipy': Perform a full Schur decomposition of `P` while
-         sorting up `m` (`m` < `n`) dominant eigenvalues 
-         (and associated Schur vectors) at the same time.
 
     tol_krylov : float, (default=1e-16)
         Convergence criterion used by SLEPc internally. This is only relevant if you use method=`krylov`. If you are
@@ -837,13 +834,6 @@ def gpcca_coarsegrain(P, eta, m, z='LM', method='brandts'):
          matrix Q afterwards using a routine published by Brandts.
          This is well tested und thus the default method, 
          although it is also the slowest choice.
-         'scipy': Perform a full Schur decomposition of `P` 
-         while sorting up `m` (`m` < `n`) dominant eigenvalues 
-         (and associated Schur vectors) at the same time.
-         This will be faster than `brandts`, if `P` is large 
-         (n > 1000) and you sort a large part of the spectrum,
-         because your number of clusters `m` is large (>20).
-         This is still experimental, so use with CAUTION!
         'krylov': Calculate an orthonormal basis of the subspace 
          associated with the `m` dominant eigenvalues of `P` 
          using the Krylov-Schur method as implemented in SLEPc.
