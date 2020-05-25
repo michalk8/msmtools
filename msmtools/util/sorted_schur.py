@@ -126,61 +126,6 @@ def top_eigenvalues(P, m, z='LM', tol=1e-16):
     return top_eigenvals, block_split
 
 
-def smallest_eigenvalue(P, z='SM', tol=1e-16):
-    r"""
-    Find the smallest eigenvalue according to an selectable criterion.
-    
-    Parameters
-    ----------
-    P : ndarray (n,n)
-        
-    z : string, (default='LM')
-        Criterion according to which the smallest eigenvalue is selected.
-        Options are:
-        'SM': eigenvalue with the smallest magnitude.
-        'SR': eigenvalue with the smallest real part.
-
-    tol : float, (default=1e-16)
-        Confergence criterion used by SLEPc internally. If you are dealing with ill
-        conditioned matrices, consider decreasing this value to get accurate results.
-        
-    """    
-    from petsc4py import PETSc
-    from slepc4py import SLEPc 
-    
-    M = PETSc.Mat().create()
-    _initialize_matrix(M, P)
-    # Creates EPS object.
-    E = SLEPc.EPS()
-    E.create()
-    # Set the matrix associated with the eigenvalue problem.
-    E.setOperators(M)
-    # Select the particular solver to be used in the EPS object: Krylov-Schur
-    E.setType(SLEPc.EPS.Type.KRYLOVSCHUR)
-    # Set the number of eigenvalues to compute and the dimension of the subspace.
-    E.setDimensions(nev=1)
-    # set the tolerance used in the convergence criterion
-    E.setTolerances(tol=tol)
-
-    if z == 'SM':
-        E.setWhichEigenpairs(E.Which.SMALLEST_MAGNITUDE)
-    elif z == 'SR':
-        E.setWhichEigenpairs(E.Which.SMALLEST_REAL)
-    else:
-        raise ValueError(f"Invalid spectrum sorting options `{z}`. Valid options are: `'SM'`, `'SR'`")
-    # Solve the eigensystem.
-    E.solve()
-
-    nconv = E.getConverged()
-    # Warn, if nconv smaller than 1.
-    if nconv < 1:
-        warnings.warn("The number of converged eigenpairs is too small.")
-    # Get the smallest eigenvalue.
-    smallest_eigenval = E.getEigenvalue(0)
-    
-    return smallest_eigenval
-
-
 def sorted_krylov_schur(P, m, z='LM', tol=1e-16):
     r"""
     Calculate an orthonormal basis of the subspace associated with the `m`
