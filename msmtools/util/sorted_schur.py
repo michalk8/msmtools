@@ -181,96 +181,6 @@ def smallest_eigenvalue(P, z='SM', tol=1e-16):
     return smallest_eigenval
 
 
-def sorted_scipy_schur(P, m, z='LM'):
-    r"""
-    Perform a full Schur decomposition of `P` while sorting up `m`
-    dominant eigenvalues (and associated Schur vectors) at the same time.
-    
-    Parameters
-    ----------
-    P : ndarray (n,n)
-        Transition matrix (row-stochastic).
-        
-    m : int
-        Number of clusters to group into.
-        
-    z : string, (default='LM')
-        Specifies which portion of the spectrum is to be sought.
-        The subspace returned will be associated with this part of the spectrum.
-        Options are:
-        'LM': the m eigenvalues with the largest magnitude are sorted up.
-        'LR': the m eigenvalues with the largest real part are sorted up.
-        
-    """
-    n = P.shape[0]
-
-    if m == n:
-        raise ValueError("Can't sort the whole Schur form with Scipy-Schur. "
-                         "Use one of the other methods instead.")
-
-    # Calculate the top m+1 eigenvalues and secure that you
-    # don't separate conjugate eigenvalues (corresponding to 2x2-block in R),
-    # if you take the dominant m eigenvalues to cluster the data.
-    top_eigenvals, block_split = top_eigenvalues(P, m, z=z)
-    
-    if block_split:
-        raise ValueError(f"Clustering P into `{m}` clusters will split "
-                         f"a pair of conjugate eigenvalues! Choose one cluster "
-                         f"more or less.")
-    
-    #eigenval_in = top_eigenvals[m-1]
-    #eigenval_out = top_eigenvals[m]
-    # Get the smallest eigenvalue.
-        
-    if z == 'LM':
-        # Determine the cutoff for sorting in schur().
-        #cutoff = (np.abs(eigenval_in) + np.abs(eigenval_out)) / 2.0 
-        cutoff = np.abs(top_eigenvals[m-1]) - 0.2
-        smallest_eigenval = np.abs(smallest_eigenvalue(P, z='SM'))
-        if cutoff < smallest_eigenval:
-            cutoff = smallest_eigenval
-            
-        R, Q, sdim = schur(P, sort=lambda x: np.abs(x) > cutoff)
-    elif z == 'LR':
-        # Determine the cutoff for sorting in schur().
-        #cutoff = (np.real(eigenval_in) + np.real(eigenval_out)) / 2.0 
-        cutoff = np.real(top_eigenvals[m-1]) - 0.2
-        smallest_eigenval = np.real(smallest_eigenvalue(P, z='SR'))
-        if cutoff < smallest_eigenval:
-            cutoff = smallest_eigenval
-
-        R, Q, sdim = schur(P, sort=lambda x: np.real(x) > cutoff)
-    else:
-        raise ValueError(f"Invalid spectrum sorting options `{z}`. Valid options are: `'LM'`, `'LR'`")
-
-    # Check, if m eigenvalues were really sorted up.
-    if sdim < m:
-        raise ValueError(f"`{m}` dominant eigenvalues (associated with the "
-                         f"same amount of clusters) were requested, but only " 
-                         f"`{sdim}` were sorted up in the Schur form.")
-
-    dummy = np.dot(P, Q)
-    dummy1 = np.dot(Q, R)
-#     dummy2 = np.concatenate((dummy, dummy1), axis=1)
-    dummy3 = subspace_angles(dummy, dummy1)
-#     test1 = ( ( matrix_rank(dummy2) - matrix_rank(dummy) ) == 0 )
-    test2 = np.all(np.allclose(dummy3, 0.0, atol=1e-8, rtol=1e-5))
-    if not test2:
-        raise ValueError(f"According to scipy.linalg.subspace_angles() sorted Scipy-Schur didn't "
-                         f"return the invariant subspace associated with the top m eigenvalues, "
-                         f"since the subspace angles between the column spaces of P*Q and Q*L"
-                         f"aren't near zero (L is a diagonal matrix with the "
-                         f"sorted top eigenvalues on the diagonal). The subspace angles are: `{dummy3}`")
-#     elif not test1:
-#         warnings.warn("According to numpy.linalg.matrix_rank() sorted Scipy-Schur didn't "
-#                       + "return the invariant subspace associated with the top m "
-#                       + " eigenvalues, since (P*Q|Q*L) (horizontally stacked) and P*Q don't "
-#                       + "have the same rank (L is a diagonal matrix with the "
-#                       + "sorted top eigenvalues on the diagonal).")
-    
-    return (R, Q)
-
-
 def sorted_krylov_schur(P, m, z='LM', tol=1e-16):
     r"""
     Calculate an orthonormal basis of the subspace associated with the `m`
@@ -474,9 +384,6 @@ def sorted_schur(P, m, z='LM', method='brandts', tol_krylov=1e-16):
         'krylov': Calculate an orthonormal basis of the subspace 
          associated with the `m` dominant eigenvalues of `P` 
          using the Krylov-Schur method as implemented in SLEPc.
-        'scipy': Perform a full Schur decomposition of `P` while
-         sorting up `m` (`m` < `n`) dominant eigenvalues 
-         (and associated Schur vectors) at the same time.
 
     tol_krylov : float, (default=1e-16)
         Convergence criterion used by SLEPc internally. This is only relevant if you use method=`krylov`. If you are
@@ -514,8 +421,6 @@ def sorted_schur(P, m, z='LM', method='brandts', tol_krylov=1e-16):
         # Warnings
         if np.any(np.array(ap) > 1.0):
             warnings.warn("Reordering of Schur matrix was inaccurate.")
-    elif method == 'scipy':
-        R, Q = sorted_scipy_schur(P, m, z=z)
     elif method == 'krylov':
         Q, _, _ = sorted_krylov_schur(P, m, z=z, tol=tol_krylov)
     else:
