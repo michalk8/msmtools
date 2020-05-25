@@ -924,13 +924,6 @@ class GPCCA(object):
          matrix Q afterwards using a routine published by Brandts.
          This is well tested und thus the default method, 
          although it is also the slowest choice.
-         'scipy': Perform a full Schur decomposition of `P` 
-         while sorting up `m` (`m` < `n`) dominant eigenvalues 
-         (and associated Schur vectors) at the same time.
-         This will be faster than `brandts`, if `P` is large 
-         (n > 1000) and you sort a large part of the spectrum,
-         because your number of clusters `m` is large (>20).
-         This is still experimental, so use with CAUTION!
         'krylov': Calculate an orthonormal basis of the subspace 
          associated with the `m` dominant eigenvalues of `P` 
          using the Krylov-Schur method as implemented in SLEPc.
@@ -1087,11 +1080,11 @@ class GPCCA(object):
             raise ValueError("Input matrix P is not a transition matrix.")
         if z not in ['LM', 'LR']:
             raise ValueError("You didn't give a valid sorting criterion z. Valid options are `'LM'` and `'LR'`.")
-        if method not in ['brandts', 'scipy', 'krylov']:
+        if method not in ['brandts', 'krylov']:
             raise ValueError("You didn't give a valid method to determine the invariant subspace.")
           
         if issparse(P) and method != 'krylov':
-            warnings.warn("Sorted Schur decoposition via the methods `brandts` and `scipy` is only implemented "
+            warnings.warn("Sorted Schur decoposition via the method `brandts` is only implemented "
                           "for dense matrices. Converting sparse transition matrix to dense ndarray.")
             P = P.toarray()
 
