@@ -30,6 +30,7 @@ import scipy.sparse.linalg
 
 from scipy.sparse import eye
 from scipy.sparse.linalg import factorized
+EPS = np.finfo(np.float64).eps
 
 
 def backward_iteration(A, mu, x0, tol=1e-14, maxiter=100):
@@ -118,10 +119,28 @@ def stationary_distribution_from_eigenvector(T, ncv=None):
         Vector of stationary probabilities.
 
     """
-    vals, vecs = scipy.sparse.linalg.eigs(T.transpose(), k=1, which='LR', ncv=ncv)
-    nu = np.abs(vecs[:, 0].real)
-    mu = nu / np.sum(nu)
-    return mu
+
+    # get the top two eigenvalues and vecs so we can check for irreducibility
+    vals, vecs = scipy.sparse.linalg.eigs(T.transpose(), k=2, which='LM', ncv=ncv)
+
+    # check for irreducibility
+    if np.allclose(np.abs(vals), 1, rtol=EPS, atol=EPS):
+        raise ValueError('This matrix is reducible')
+
+    # check for imaginary component
+    top_vec = vecs[:, 0]
+    imaginary_component = top_vec.imag
+    if not np.allclose(imaginary_component, 0, rtol=EPS, atol=EPS):
+        raise ValueError('Top eigenvector has imaginary component')
+    top_vec = top_vec.real
+
+    # check the sign structure
+    if not (top_vec > -EPS).all() and not (top_vec < EPS).all():
+        raise ValueError('Top eigenvector has both positive and negative entries')
+    top_vec = np.abs(top_vec)
+
+    # normalize to 1 and return
+    return top_vec / np.sum(top_vec)
 
 
 def stationary_distribution(T):
