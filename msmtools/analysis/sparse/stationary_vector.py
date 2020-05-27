@@ -121,10 +121,10 @@ def stationary_distribution_from_eigenvector(T, ncv=None):
     """
 
     # get the top two eigenvalues and vecs so we can check for irreducibility
-    vals, vecs = scipy.sparse.linalg.eigs(T.transpose(), k=2, which='LM', ncv=ncv)
+    vals, vecs = scipy.sparse.linalg.eigs(T.transpose(), k=2, which='LR', ncv=ncv)
 
     # check for irreducibility
-    if np.allclose(np.abs(vals), 1, rtol=EPS, atol=EPS):
+    if np.allclose(vals, 1, rtol=EPS, atol=EPS):
         raise ValueError('This matrix is reducible')
 
     # check for imaginary component
