@@ -135,7 +135,7 @@ def stationary_distribution_from_eigenvector(T, ncv=None):
     top_vec = top_vec.real
 
     # check the sign structure
-    if not (top_vec > -EPS).all() and not (top_vec < EPS).all():
+    if not (top_vec > -1e4*EPS).all() and not (top_vec < 1e4*EPS).all():
         raise ValueError('Top eigenvector has both positive and negative entries')
     top_vec = np.abs(top_vec)
 
