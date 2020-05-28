@@ -124,11 +124,15 @@ def stationary_distribution_from_eigenvector(T, ncv=None):
     vals, vecs = scipy.sparse.linalg.eigs(T.transpose(), k=2, which='LR', ncv=ncv)
 
     # check for irreducibility
-    if np.allclose(vals, 1, rtol=EPS, atol=EPS):
+    if np.allclose(vals, 1, rtol=1e2*EPS, atol=1e2*EPS):
         raise ValueError('This matrix is reducible')
 
-    # check for imaginary component
+    # sort by real part and take the top one
+    p = np.argsort(vals.real)[::-1]
+    vecs = vecs[:, p]
     top_vec = vecs[:, 0]
+
+    # check for imaginary component
     imaginary_component = top_vec.imag
     if not np.allclose(imaginary_component, 0, rtol=EPS, atol=EPS):
         raise ValueError('Top eigenvector has imaginary component')
