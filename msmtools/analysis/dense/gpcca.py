@@ -161,7 +161,7 @@ def _gram_schmidt_mod(X, eta):
     return Q
 
 
-def _do_schur(P, eta, m, z='LM', method='brandts'):
+def _do_schur(P, eta, m, z='LM', method='brandts', tol_krylov=1e-16):
     r"""
     This function performs a Schur decomposition of the (n,n) transition matrix `P`, with due regard 
     to the input (initial) distribution of states `eta` (which can be the stationary distribution ``pi``,
@@ -202,9 +202,10 @@ def _do_schur(P, eta, m, z='LM', method='brandts'):
         'krylov': Calculate an orthonormal basis of the subspace 
          associated with the `m` dominant eigenvalues of `P` 
          using the Krylov-Schur method as implemented in SLEPc.
-        'scipy': Perform a full Schur decomposition of `P` while
-         sorting up `m` (`m` < `n`) dominant eigenvalues 
-         (and associated Schur vectors) at the same time.
+
+    tol_krylov : float, (default=1e-16)
+        Convergence criterion used by SLEPc internally. This is only relevant if you use method=`krylov`. If you are
+        dealing with ill conditioned matrices, consider decreasing this value to get accurate results.
         
     Returns
     -------
@@ -247,9 +248,9 @@ def _do_schur(P, eta, m, z='LM', method='brandts'):
 
     # Make a Schur decomposition of P_bar and sort the Schur vectors (and form).
     if method == 'krylov':
-        Q = sorted_schur(P_bar, m, z, method) #Pbar!!!
+        Q = sorted_schur(P_bar, m, z, method, tol_krylov=tol_krylov) #Pbar!!!
     else:
-        R, Q = sorted_schur(P_bar, m, z, method) #Pbar!!!
+        R, Q = sorted_schur(P_bar, m, z, method, tol_krylov=tol_krylov) #Pbar!!!
         if m - 1 not in _find_twoblocks(R): #TODO: Rethink this, mb only for stuff sorted with brandts...
             warnings.warn("Coarse-graining with " + str(m) + " states cuts through "
                           + "a block of complex conjugate eigenvalues in the Schur "
@@ -570,9 +571,8 @@ def _opt_soft(X, rot_matrix):
         else:
             chi[chi < 0.0] = 0.0
             chi = np.diag(np.true_divide(1.0, np.sum(chi, axis=1))).dot(chi)
-            if not np.allclose(np.sum(chi, axis=1), 1.0, rtol=eps, atol=eps):
-                raise ValueError("The rows of chi don't sum up to 1.0 after rescaling "
-                                 + "(with a absolute and relative tolerance of " + str(eps) + ").")
+            if not np.allclose(np.sum(chi, axis=1), 1.0, atol=1e-8, rtol=1e-5):
+                raise ValueError("The rows of chi don't sum up to 1.0 after rescaling")
             
     return rot_matrix, chi, fopt
   
@@ -834,13 +834,6 @@ def gpcca_coarsegrain(P, eta, m, z='LM', method='brandts'):
          matrix Q afterwards using a routine published by Brandts.
          This is well tested und thus the default method, 
          although it is also the slowest choice.
-         'scipy': Perform a full Schur decomposition of `P` 
-         while sorting up `m` (`m` < `n`) dominant eigenvalues 
-         (and associated Schur vectors) at the same time.
-         This will be faster than `brandts`, if `P` is large 
-         (n > 1000) and you sort a large part of the spectrum,
-         because your number of clusters `m` is large (>20).
-         This is still experimental, so use with CAUTION!
         'krylov': Calculate an orthonormal basis of the subspace 
          associated with the `m` dominant eigenvalues of `P` 
          using the Krylov-Schur method as implemented in SLEPc.
@@ -921,13 +914,6 @@ class GPCCA(object):
          matrix Q afterwards using a routine published by Brandts.
          This is well tested und thus the default method, 
          although it is also the slowest choice.
-         'scipy': Perform a full Schur decomposition of `P` 
-         while sorting up `m` (`m` < `n`) dominant eigenvalues 
-         (and associated Schur vectors) at the same time.
-         This will be faster than `brandts`, if `P` is large 
-         (n > 1000) and you sort a large part of the spectrum,
-         because your number of clusters `m` is large (>20).
-         This is still experimental, so use with CAUTION!
         'krylov': Calculate an orthonormal basis of the subspace 
          associated with the `m` dominant eigenvalues of `P` 
          using the Krylov-Schur method as implemented in SLEPc.
@@ -953,7 +939,7 @@ class GPCCA(object):
          but this doesn't matter if the installer finally tells you
          ``Successfully installed [package name here]``.
          ------------------------------------------------------
-        
+
     Properties
     ----------
     
@@ -1084,11 +1070,11 @@ class GPCCA(object):
             raise ValueError("Input matrix P is not a transition matrix.")
         if z not in ['LM', 'LR']:
             raise ValueError("You didn't give a valid sorting criterion z. Valid options are `'LM'` and `'LR'`.")
-        if method not in ['brandts', 'scipy', 'krylov']:
+        if method not in ['brandts', 'krylov']:
             raise ValueError("You didn't give a valid method to determine the invariant subspace.")
           
         if issparse(P) and method != 'krylov':
-            warnings.warn("Sorted Schur decoposition via the methods `brandts` and `scipy` is only implemented "
+            warnings.warn("Sorted Schur decoposition via the method `brandts` is only implemented "
                           "for dense matrices. Converting sparse transition matrix to dense ndarray.")
             P = P.toarray()
 
