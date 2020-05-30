@@ -30,6 +30,7 @@ import scipy.sparse.linalg
 
 from scipy.sparse import eye
 from scipy.sparse.linalg import factorized
+EPS = np.finfo(np.float64).eps
 
 
 def backward_iteration(A, mu, x0, tol=1e-14, maxiter=100):
@@ -118,10 +119,32 @@ def stationary_distribution_from_eigenvector(T, ncv=None):
         Vector of stationary probabilities.
 
     """
-    vals, vecs = scipy.sparse.linalg.eigs(T.transpose(), k=1, which='LR', ncv=ncv)
-    nu = vecs[:, 0].real
-    mu = nu / np.sum(nu)
-    return mu
+
+    # get the top two eigenvalues and vecs so we can check for irreducibility
+    vals, vecs = scipy.sparse.linalg.eigs(T.transpose(), k=2, which='LR', ncv=ncv)
+
+    # check for irreducibility
+    if np.allclose(vals, 1, rtol=1e2*EPS, atol=1e2*EPS):
+        raise ValueError('This matrix is reducible')
+
+    # sort by real part and take the top one
+    p = np.argsort(vals.real)[::-1]
+    vecs = vecs[:, p]
+    top_vec = vecs[:, 0]
+
+    # check for imaginary component
+    imaginary_component = top_vec.imag
+    if not np.allclose(imaginary_component, 0, rtol=EPS, atol=EPS):
+        raise ValueError('Top eigenvector has imaginary component')
+    top_vec = top_vec.real
+
+    # check the sign structure
+    if not (top_vec > -1e4*EPS).all() and not (top_vec < 1e4*EPS).all():
+        raise ValueError('Top eigenvector has both positive and negative entries')
+    top_vec = np.abs(top_vec)
+
+    # normalize to 1 and return
+    return top_vec / np.sum(top_vec)
 
 
 def stationary_distribution(T):
@@ -140,18 +163,6 @@ def stationary_distribution(T):
         Vector of stationary probabilities.
 
     """
-    fallback = False
-    try:
-        mu = stationary_distribution_from_backward_iteration(T)
-        if np.any(mu < 0):  # numerical problem, fall back to more robust algorithm.
-            fallback=True
-    except RuntimeError:
-        fallback = True
-
-    if fallback:
-        mu = stationary_distribution_from_eigenvector(T)
-        if np.any(mu < 0):  # still? Then set to 0 and renormalize
-            mu = np.maximum(mu, 0.0)
-            mu /= mu.sum()
+    mu = stationary_distribution_from_eigenvector(T)
 
     return mu
