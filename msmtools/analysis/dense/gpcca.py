@@ -314,7 +314,7 @@ def _do_schur(P, eta, m, z='LM', method='brandts', tol_krylov=1e-16):
     if not np.allclose(X[:, 0], 1.0, atol=1e-8, rtol=1e-5):
         raise ValueError("The first column X[:, 0] of the Schur vector matrix isn't constantly equal 1.")
                   
-    return X, R
+    return X, R, eigenvalues
 
 
 def _objective(alpha, X):
@@ -1080,6 +1080,7 @@ class GPCCA(object):
 
         self.X = None
         self.R = None
+        self.eigenvalues = None
         self.z = z
         self.method = method
 
@@ -1097,9 +1098,9 @@ class GPCCA(object):
                 raise ValueError(f"The first dimension of X is `{Xdim1}`. This doesn't match "
                                  f"with the dimension of R [{Rdim1}, {Rdim2}].")
             if Rdim2 < m:
-                self.X, self.R = _do_schur(self.P, self.eta, m, self.z, self.method)
+                self.X, self.R, self.eigenvalues = _do_schur(self.P, self.eta, m, self.z, self.method)
         else:
-            self.X, self.R = _do_schur(self.P, self.eta, m, self.z, self.method)
+            self.X, self.R, self.eigenvalues = _do_schur(self.P, self.eta, m, self.z, self.method)
 
     def minChi(self, m_min, m_max):
         r"""
@@ -1339,6 +1340,7 @@ class GPCCA(object):
         self._crispness = crispness_list[opt_idx]
         self._X = self.X[:, :self._m_opt]
         self._R = self.R[:self._m_opt, :self._m_opt]
+        self._eigenvalues = self.eigenvalues[:self._m_opt]
 
         # stationary distribution
         from msmtools.analysis import stationary_distribution as _stationary_distribution
@@ -1356,7 +1358,7 @@ class GPCCA(object):
         self._P_coarse = coarsegrain(self.P, self.eta, self._chi)
 
         if return_extra:
-            return self, self.X, self.R, chi_list, rot_matrix_list, crispness_list
+            return self, self.X, self.R, self.eigenvalues, chi_list, rot_matrix_list, crispness_list
 
         return self
 
@@ -1391,6 +1393,10 @@ class GPCCA(object):
     @property
     def schur_matrix(self):
         return self._R
+
+    @property
+    def top_eigenvalues(self):
+        return self._eigenvalues
     
     @property
     def cluster_crispness(self):
