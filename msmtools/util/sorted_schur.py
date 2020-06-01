@@ -394,8 +394,8 @@ def sorted_schur(P, m, z='LM', method='brandts', tol_krylov=1e-16):
         if np.any(np.array(ap) > 1.0):
             warnings.warn("Reordering of Schur matrix was inaccurate.")
     elif method == 'krylov':
-        R, Q, _, _ = sorted_krylov_schur(P, m, z=z, tol=tol_krylov)
+        R, Q, eigenvalues, _ = sorted_krylov_schur(P, m, z=z, tol=tol_krylov)
     else:
         raise ValueError(f"Unknown method `{method!r}`.")
        
-    return R, Q
+    return R, Q, eigenvalues
