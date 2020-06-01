@@ -1110,7 +1110,7 @@ class GPCCA(object):
                 raise ValueError(f"The first dimension of X is `{Xdim1}`. This doesn't match "
                                  f"with the dimension of R [{Rdim1}, {Rdim2}].")
             if n_evals != Rdim1:
-                raise ValueError(f"The number of eigenvalues is {n_evals}. This doesn't match"
+                raise ValueError(f"The number of eigenvalues is `{n_evals}`. This doesn't match "
                                  f"with the dimension of R [{Rdim1}, {Rdim2}].")
             if Rdim2 < m:
                 self.X, self.R, self.eigenvalues = _do_schur(self.P, self.eta, m, self.z, self.method)

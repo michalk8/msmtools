@@ -265,14 +265,14 @@ def sorted_krylov_schur(P, m, z='LM', tol=1e-16):
         # Computes the error (based on the residual norm) associated with the i-th computed eigenpair.
         eigenval_error = E.computeError(i)
         top_eigenvals_error.append(eigenval_error)
-    top_eigenvals = np.asarray(top_eigenvals)
-    top_eigenvals_error = np.asarray(top_eigenvals_error)
+    top_eigenvals = np.asarray(top_eigenvals)[:m]
+    top_eigenvals_error = np.asarray(top_eigenvals_error)[:m]
 
     dummy = np.dot(P, csr_matrix(Q) if issparse(P) else Q)
     if issparse(dummy):
         dummy = dummy.toarray()
 
-    dummy1 = np.dot(Q, np.diag(top_eigenvals[:m]))
+    dummy1 = np.dot(Q, np.diag(top_eigenvals))
 #     dummy2 = np.concatenate((dummy, dummy1), axis=1)
     dummy3 = subspace_angles(dummy, dummy1)
 #     test1 = ( ( matrix_rank(dummy2) - matrix_rank(dummy) ) == 0 )
