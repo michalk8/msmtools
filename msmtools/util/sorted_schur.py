@@ -5,6 +5,7 @@ import warnings
 from scipy.linalg import schur, subspace_angles
 from msmtools.util.sort_real_schur import sort_real_schur
 from scipy.sparse import issparse, isspmatrix_csr, csr_matrix
+from scipy.linalg import rsf2csf
 
 # Machine double floating precision:
 eps = np.finfo(np.float64).eps
@@ -367,6 +368,11 @@ def sorted_schur(P, m, z='LM', method='brandts', tol_krylov=1e-16):
         
         # Sort the Schur matrix and vectors.
         Q, R, ap = sort_real_schur(Q, R, z=z, b=m)
+
+        # comptue eigenvalues
+        T, _ = rsf2csf(R, Q)
+        eigenvalues = np.diag(T)
+
         # Warnings
         if np.any(np.array(ap) > 1.0):
             warnings.warn("Reordering of Schur matrix was inaccurate.")
