@@ -381,14 +381,12 @@ def sorted_schur(P, m, z='LM', method='brandts', tol_krylov=1e-16):
         T, _ = rsf2csf(R, Q)
         eigenvalues = np.diag(T)[:k]
 
+        # check for splitting pairs of complex conjugates
         if (m < n):
             eigenval_in = eigenvalues[m - 1]
             eigenval_out = eigenvalues[m]
-            # Don't separate conjugate eigenvalues (corresponding to 2x2-block in R).
             if np.isclose(eigenval_in, np.conj(eigenval_out)):
-                block_split = True
-                warnings.warn("Clustering into " + str(m) + " clusters will split conjugate eigenvalues! "
-                                                            "Request one cluster more or less.")
+                raise ValueError(f'Clustering into {m} clusters will split conjugate eigenvales. Request one cluster more or less. ')
 
         # Warnings
         if np.any(np.array(ap) > 1.0):
