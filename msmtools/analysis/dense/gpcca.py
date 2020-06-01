@@ -83,7 +83,18 @@ def _find_twoblocks(R):
     validclusters = np.setdiff1d(np.arange(R.shape[0] + 1), badindices + 1)
     
     return validclusters
-  
+
+def _check_conj_splitting(eigenvalues, m):
+    """Utility function to check whether m cuts through a block of complex conjugates
+    """
+
+    if len(eigenvalues) < m:
+        raise ValueError(f'Not enough eigenvalues computed to check clustering into {m} states')
+
+    eigenval_in = eigenvalues[m - 1]
+    eigenval_out = eigenvalues[m]
+
+    return np.isclose(eigenval_in, np.conj(eigenval_out))
   
 def _gram_schmidt_mod(X, eta):
     r"""
@@ -1086,9 +1097,10 @@ class GPCCA(object):
 
     def _do_schur_helper(self, m):
         n = np.shape(self.P)[0]
-        if self.X is not None and self.R is not None:
+        if self.X is not None and self.R is not None and self.eigenvalues is not None:
             Xdim1, Xdim2 = self.X.shape
             Rdim1, Rdim2 = self.R.shape
+            n_evals = len(self.eigenvalues)
             if Xdim1 != n:
                 raise ValueError(f"The first dimension of X is `{Xdim1}`. This doesn't match "
                                  f"with the dimension of P [{n}, {n}].")
@@ -1097,8 +1109,17 @@ class GPCCA(object):
             if Xdim2 != Rdim1:
                 raise ValueError(f"The first dimension of X is `{Xdim1}`. This doesn't match "
                                  f"with the dimension of R [{Rdim1}, {Rdim2}].")
+            if n_evals != Rdim1:
+                raise ValueError(f"The number of eigenvalues is {n_evals}. This doesn't match"
+                                 f"with the dimension of R [{Rdim1}, {Rdim2}].")
             if Rdim2 < m:
                 self.X, self.R, self.eigenvalues = _do_schur(self.P, self.eta, m, self.z, self.method)
+
+            # if we are using pre-computed decomposition, check splitting
+            if m < n:
+                if _check_conj_splitting(self.eigenvalues, m):
+                    raise ValueError(f'Clustering into {m} clusters will split conjugate eigenvalues. '
+                                     f'Request one cluster more or less. ')
         else:
             self.X, self.R, self.eigenvalues = _do_schur(self.P, self.eta, m, self.z, self.method)
 
