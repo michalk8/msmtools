@@ -386,7 +386,8 @@ def sorted_schur(P, m, z='LM', method='brandts', tol_krylov=1e-16):
             eigenval_in = eigenvalues[m - 1]
             eigenval_out = eigenvalues[m]
             if np.isclose(eigenval_in, np.conj(eigenval_out)):
-                raise ValueError(f'Clustering into {m} clusters will split conjugate eigenvales. Request one cluster more or less. ')
+                raise ValueError(f'Clustering into {m} clusters will split conjugate eigenvales. '
+                                 f'Request one cluster more or less. ')
 
         # Warnings
         if np.any(np.array(ap) > 1.0):
