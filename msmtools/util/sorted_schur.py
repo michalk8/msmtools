@@ -265,6 +265,8 @@ def sorted_krylov_schur(P, m, z='LM', tol=1e-16):
         # Computes the error (based on the residual norm) associated with the i-th computed eigenpair.
         eigenval_error = E.computeError(i)
         top_eigenvals_error.append(eigenval_error)
+
+    # cut off excess dimensions also for the eigenvalues
     top_eigenvals = np.asarray(top_eigenvals)[:m]
     top_eigenvals_error = np.asarray(top_eigenvals_error)[:m]
 
