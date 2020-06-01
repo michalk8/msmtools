@@ -1114,12 +1114,12 @@ class GPCCA(object):
                                  f"with the dimension of R [{Rdim1}, {Rdim2}].")
             if Rdim2 < m:
                 self.X, self.R, self.eigenvalues = _do_schur(self.P, self.eta, m, self.z, self.method)
-
-            # if we are using pre-computed decomposition, check splitting
-            if m < n:
-                if _check_conj_splitting(self.eigenvalues, m):
-                    raise ValueError(f'Clustering into {m} clusters will split conjugate eigenvalues. '
-                                     f'Request one cluster more or less. ')
+            else:
+                # if we are using pre-computed decomposition, check splitting
+                if m < n:
+                    if _check_conj_splitting(self.eigenvalues, m):
+                        raise ValueError(f'Clustering into {m} clusters will split conjugate eigenvalues. '
+                                         f'Request one cluster more or less. ')
         else:
             self.X, self.R, self.eigenvalues = _do_schur(self.P, self.eta, m, self.z, self.method)
 
