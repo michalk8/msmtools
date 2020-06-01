@@ -365,9 +365,16 @@ def sorted_schur(P, m, z='LM', method='brandts', tol_krylov=1e-16):
    
         # Make a Schur decomposition of P.
         R, Q = schur(P, output='real')
+
+        # sort one more than requested
+        n = P.shape[0]
+        if m < n:
+            k = m + 1
+        elif m == n:
+            k = m
         
         # Sort the Schur matrix and vectors.
-        Q, R, ap = sort_real_schur(Q, R, z=z, b=m)
+        Q, R, ap = sort_real_schur(Q, R, z=z, b=k)
 
         # comptue eigenvalues
         T, _ = rsf2csf(R, Q)
