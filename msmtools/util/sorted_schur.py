@@ -248,6 +248,7 @@ def sorted_krylov_schur(P, m, z='LM', tol=1e-16):
 #                       + "invariant subspace associated with the sorted top m eigenvalues.")
     # Cut off, if too large.
     Q = Subspace[:, :m]
+    R = R[:m, :m]
     
     # Gets the number of converged eigenpairs. 
     nconv = E.getConverged()
