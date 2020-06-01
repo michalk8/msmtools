@@ -362,7 +362,7 @@ def sorted_schur(P, m, z='LM', method='brandts', tol_krylov=1e-16):
         # Calculate the top m+1 eigenvalues and secure that you
         # don't separate conjugate eigenvalues (corresponding to 2x2-block in R),
         # if you take the dominant m eigenvalues to cluster the data.
-        _ = top_eigenvalues(P, m, z=z, tol=tol_krylov)
+        #  _ = top_eigenvalues(P, m, z=z, tol=tol_krylov)
    
         # Make a Schur decomposition of P.
         R, Q = schur(P, output='real')
