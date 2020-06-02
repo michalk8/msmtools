@@ -1120,6 +1120,7 @@ class GPCCA(object):
                         if _check_conj_splitting(self.eigenvalues, m):
                             raise ValueError(f'Clustering into {m} clusters will split conjugate eigenvalues. '
                                              f'Request one cluster more or less. ')
+                        print('INFO: Using pre-computed schur decomposition')
         else:
             self.X, self.R, self.eigenvalues = _do_schur(self.P, self.eta, m, self.z, self.method)
 
