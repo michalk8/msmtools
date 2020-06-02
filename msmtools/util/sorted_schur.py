@@ -267,14 +267,14 @@ def sorted_krylov_schur(P, m, z='LM', tol=1e-16):
         top_eigenvals_error.append(eigenval_error)
 
     # cut off excess dimensions also for the eigenvalues
-    top_eigenvals = np.asarray(top_eigenvals)[:m]
-    top_eigenvals_error = np.asarray(top_eigenvals_error)[:m]
+    top_eigenvals = np.asarray(top_eigenvals)
+    top_eigenvals_error = np.asarray(top_eigenvals_error)
 
     dummy = np.dot(P, csr_matrix(Q) if issparse(P) else Q)
     if issparse(dummy):
         dummy = dummy.toarray()
 
-    dummy1 = np.dot(Q, np.diag(top_eigenvals))
+    dummy1 = np.dot(Q, np.diag(top_eigenvals[:m]))
 #     dummy2 = np.concatenate((dummy, dummy1), axis=1)
     dummy3 = subspace_angles(dummy, dummy1)
 #     test1 = ( ( matrix_rank(dummy2) - matrix_rank(dummy) ) == 0 )
@@ -390,7 +390,7 @@ def sorted_schur(P, m, z='LM', method='brandts', tol_krylov=1e-16):
             if np.isclose(eigenval_in, np.conj(eigenval_out)):
                 raise ValueError(f'Clustering into {m} clusters will split conjugate eigenvalues. '
                                  f'Request one cluster more or less. ')
-            Q, R, eigenvalues = Q[:, :m], R[:m, :m], eigenvalues[:m]
+            Q, R, eigenvalues = Q[:, :m], R[:m, :m], eigenvalues
 
         # Warnings
         if np.any(np.array(ap) > 1.0):

@@ -1100,7 +1100,6 @@ class GPCCA(object):
         if self.X is not None and self.R is not None and self.eigenvalues is not None:
             Xdim1, Xdim2 = self.X.shape
             Rdim1, Rdim2 = self.R.shape
-            n_evals = len(self.eigenvalues)
             if Xdim1 != n:
                 raise ValueError(f"The first dimension of X is `{Xdim1}`. This doesn't match "
                                  f"with the dimension of P [{n}, {n}].")
@@ -1109,17 +1108,18 @@ class GPCCA(object):
             if Xdim2 != Rdim1:
                 raise ValueError(f"The first dimension of X is `{Xdim1}`. This doesn't match "
                                  f"with the dimension of R [{Rdim1}, {Rdim2}].")
-            if n_evals != Rdim1:
-                raise ValueError(f"The number of eigenvalues is `{n_evals}`. This doesn't match "
-                                 f"with the dimension of R [{Rdim1}, {Rdim2}].")
             if Rdim2 < m:
                 self.X, self.R, self.eigenvalues = _do_schur(self.P, self.eta, m, self.z, self.method)
             else:
                 # if we are using pre-computed decomposition, check splitting
                 if m < n:
-                    if _check_conj_splitting(self.eigenvalues, m):
-                        raise ValueError(f'Clustering into {m} clusters will split conjugate eigenvalues. '
-                                         f'Request one cluster more or less. ')
+                    if len(self.eigenvalues) < m+1:
+                        raise ValueError(f"Can't check compl. conj. block splitting for {m} clusters with only "
+                                         "{len(self.eigenvalues} eigenvalues")
+                    else:
+                        if _check_conj_splitting(self.eigenvalues, m):
+                            raise ValueError(f'Clustering into {m} clusters will split conjugate eigenvalues. '
+                                             f'Request one cluster more or less. ')
         else:
             self.X, self.R, self.eigenvalues = _do_schur(self.P, self.eta, m, self.z, self.method)
 
