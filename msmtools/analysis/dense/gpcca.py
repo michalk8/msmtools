@@ -1115,7 +1115,7 @@ class GPCCA(object):
                 if m < n:
                     if len(self.eigenvalues) < m+1:
                         raise ValueError(f"Can't check compl. conj. block splitting for {m} clusters with only "
-                                         "{len(self.eigenvalues} eigenvalues")
+                                         f"{len(self.eigenvalues)} eigenvalues")
                     else:
                         if _check_conj_splitting(self.eigenvalues, m):
                             raise ValueError(f'Clustering into {m} clusters will split conjugate eigenvalues. '
