@@ -247,20 +247,16 @@ def _do_schur(P, eta, m, z='LM', method='brandts', tol_krylov=1e-16):
         P_bar = np.diag(np.sqrt(eta)).dot(P).dot(np.diag(1. / np.sqrt(eta)))
 
     # Make a Schur decomposition of P_bar and sort the Schur vectors (and form).
-    if method == 'krylov':
-        Q = sorted_schur(P_bar, m, z, method, tol_krylov=tol_krylov) #Pbar!!!
-    else:
-        R, Q = sorted_schur(P_bar, m, z, method, tol_krylov=tol_krylov) #Pbar!!!
-        if m - 1 not in _find_twoblocks(R): #TODO: Rethink this, mb only for stuff sorted with brandts...
-            warnings.warn("Coarse-graining with " + str(m) + " states cuts through "
-                          + "a block of complex conjugate eigenvalues in the Schur "
-                          + "form. The result will be of questionable meaning. "
-                          + "Please increase/decrease number of states by one.")
-        # Since the Schur form R and Schur vectors are only partially
-        # sorted, one doesn't need the whole R and Schur vector matrix Q.
-        # Take only the sorted Schur form and the vectors belonging to it.
-        R = R[:m, :m]
-        
+    R, Q = sorted_schur(P_bar, m, z, method, tol_krylov=tol_krylov) #Pbar!!!
+    if m - 1 not in _find_twoblocks(R): #TODO: Rethink this, mb only for stuff sorted with brandts...
+        warnings.warn("Coarse-graining with " + str(m) + " states cuts through "
+                      + "a block of complex conjugate eigenvalues in the Schur "
+                      + "form. The result will be of questionable meaning. "
+                      + "Please increase/decrease number of states by one.")
+    # Since the Schur form R and Schur vectors are only partially
+    # sorted, one doesn't need the whole R and Schur vector matrix Q.
+    # Take only the sorted Schur form and the vectors belonging to it.
+    R = R[:m, :m]
     Q = Q[:, :m]
     
     # Orthonormalize the sorted Schur vectors Q via modified Gram-Schmidt-orthonormalization,
@@ -299,18 +295,15 @@ def _do_schur(P, eta, m, z='LM', method='brandts', tol_krylov=1e-16):
         raise ValueError("Schur vectors appear to not be D-orthogonal.")
     # Raise, if X doesn't fullfill the invariant subspace condition!
 
-    if method == 'krylov':
-        dp = np.dot(P, sp.csr_matrix(X) if issparse(P) else X)
-        dummy = subspace_angles(dp.toarray() if issparse(dp) else dp, X)
-    else:
-        dummy = subspace_angles(np.dot(P, X), np.dot(X, R))
+    dp = np.dot(P, sp.csr_matrix(X) if issparse(P) else X)
+    dummy = subspace_angles(dp.toarray() if issparse(dp) else dp, np.dot(X, R))
 
     test = np.allclose(dummy, 0.0, atol=1e-6, rtol=1e-5)
     test1 = (dummy.shape[0] == m)
     if not test:
         raise ValueError(f"According to scipy.linalg.subspace_angles() X isn't an invariant "
                          f"subspace of P, since the subspace angles between the column spaces "
-                         f"of P*X and X*R (resp. X, if you chose the Krylov-Schur method)"
+                         f"of P*X and X*R (resp. X, if you chose the Krylov-Schur method) "
                          f"aren't near zero. The subspace angles are: `{dummy}`")
     elif not test1:
         warnings.warn("According to scipy.linalg.subspace_angles() the dimension of the "
@@ -320,9 +313,6 @@ def _do_schur(P, eta, m, z='LM', method='brandts', tol_krylov=1e-16):
     if not np.allclose(X[:, 0], 1.0, atol=1e-8, rtol=1e-5):
         raise ValueError("The first column X[:, 0] of the Schur vector matrix isn't constantly equal 1.")
                   
-    if method == 'krylov':
-        return X
-
     return X, R
 
 
@@ -1094,32 +1084,21 @@ class GPCCA(object):
 
     def _do_schur_helper(self, m):
         n = np.shape(self.P)[0]
-        if self.method == 'krylov':
-            if self.X is not None:
-                Xdim1, Xdim2 = self.X.shape
-                if Xdim1 != n:
-                    raise ValueError(f"The first dimension of X is `{Xdim1}`. This doesn't match "
-                                     f"with the dimension of P [{n}, {n}].")
-                if Xdim2 < m:
-                    self.X = _do_schur(self.P, self.eta, m, self.z, self.method)
-            else:
-                self.X = _do_schur(self.P, self.eta, m, self.z, self.method)
-        else:
-            if self.X is not None and self.R is not None:
-                Xdim1, Xdim2 = self.X.shape
-                Rdim1, Rdim2 = self.R.shape
-                if Xdim1 != n:
-                    raise ValueError(f"The first dimension of X is `{Xdim1}`. This doesn't match "
-                                     f"with the dimension of P [{n}, {n}].")
-                if Rdim1 != Rdim2:
-                    raise ValueError("The Schur form R is not quadratic.")
-                if Xdim2 != Rdim1:
-                    raise ValueError(f"The first dimension of X is `{Xdim1}`. This doesn't match "
-                                     f"with the dimension of R [{Rdim1}, {Rdim2}].")
-                if Rdim2 < m:
-                    self.X, self.R = _do_schur(self.P, self.eta, m, self.z, self.method)
-            else:
+        if self.X is not None and self.R is not None:
+            Xdim1, Xdim2 = self.X.shape
+            Rdim1, Rdim2 = self.R.shape
+            if Xdim1 != n:
+                raise ValueError(f"The first dimension of X is `{Xdim1}`. This doesn't match "
+                                 f"with the dimension of P [{n}, {n}].")
+            if Rdim1 != Rdim2:
+                raise ValueError("The Schur form R is not quadratic.")
+            if Xdim2 != Rdim1:
+                raise ValueError(f"The first dimension of X is `{Xdim1}`. This doesn't match "
+                                 f"with the dimension of R [{Rdim1}, {Rdim2}].")
+            if Rdim2 < m:
                 self.X, self.R = _do_schur(self.P, self.eta, m, self.z, self.method)
+        else:
+            self.X, self.R = _do_schur(self.P, self.eta, m, self.z, self.method)
 
     def minChi(self, m_min, m_max):
         r"""
@@ -1358,10 +1337,7 @@ class GPCCA(object):
         self._rot_matrix = rot_matrix_list[opt_idx]
         self._crispness = crispness_list[opt_idx]
         self._X = self.X[:, :self._m_opt]
-        if self.method == 'krylov':
-            self._R = None
-        else:
-            self._R = self.R[:self._m_opt, :self._m_opt]
+        self._R = self.R[:self._m_opt, :self._m_opt]
 
         # stationary distribution
         from msmtools.analysis import stationary_distribution as _stationary_distribution
@@ -1413,8 +1389,6 @@ class GPCCA(object):
     
     @property
     def schur_matrix(self):
-        if self._R is None:
-            warnings.warn("The Schur form R is not defined, because you chose `method='krylov'`.")
         return self._R
     
     @property
