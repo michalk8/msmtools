@@ -5,6 +5,7 @@ import warnings
 from scipy.linalg import schur, subspace_angles
 from msmtools.util.sort_real_schur import sort_real_schur
 from scipy.sparse import issparse, isspmatrix_csr, csr_matrix
+from scipy.linalg import rsf2csf
 
 # Machine double floating precision:
 eps = np.finfo(np.float64).eps
@@ -247,6 +248,7 @@ def sorted_krylov_schur(P, m, z='LM', tol=1e-16):
 #                       + "invariant subspace associated with the sorted top m eigenvalues.")
     # Cut off, if too large.
     Q = Subspace[:, :m]
+    R = R[:m, :m]
     
     # Gets the number of converged eigenpairs. 
     nconv = E.getConverged()
@@ -263,6 +265,8 @@ def sorted_krylov_schur(P, m, z='LM', tol=1e-16):
         # Computes the error (based on the residual norm) associated with the i-th computed eigenpair.
         eigenval_error = E.computeError(i)
         top_eigenvals_error.append(eigenval_error)
+
+    # cut off excess dimensions also for the eigenvalues
     top_eigenvals = np.asarray(top_eigenvals)
     top_eigenvals_error = np.asarray(top_eigenvals_error)
 
@@ -360,19 +364,40 @@ def sorted_schur(P, m, z='LM', method='brandts', tol_krylov=1e-16):
         # Calculate the top m+1 eigenvalues and secure that you
         # don't separate conjugate eigenvalues (corresponding to 2x2-block in R),
         # if you take the dominant m eigenvalues to cluster the data.
-        _ = top_eigenvalues(P, m, z=z, tol=tol_krylov)
+        #  _ = top_eigenvalues(P, m, z=z, tol=tol_krylov)
    
         # Make a Schur decomposition of P.
         R, Q = schur(P, output='real')
+
+        # sort one more than requested
+        n = P.shape[0]
+        if m < n:
+            k = m + 1
+        elif m == n:
+            k = m
         
         # Sort the Schur matrix and vectors.
-        Q, R, ap = sort_real_schur(Q, R, z=z, b=m)
+        Q, R, ap = sort_real_schur(Q, R, z=z, b=k)
+
+        # comptue eigenvalues
+        T, _ = rsf2csf(R, Q)
+        eigenvalues = np.diag(T)[:k]
+
+        # check for splitting pairs of complex conjugates
+        if (m < n):
+            eigenval_in = eigenvalues[m - 1]
+            eigenval_out = eigenvalues[m]
+            if np.isclose(eigenval_in, np.conj(eigenval_out)):
+                raise ValueError(f'Clustering into {m} clusters will split conjugate eigenvalues. '
+                                 f'Request one cluster more or less. ')
+            Q, R, eigenvalues = Q[:, :m], R[:m, :m], eigenvalues
+
         # Warnings
         if np.any(np.array(ap) > 1.0):
             warnings.warn("Reordering of Schur matrix was inaccurate.")
     elif method == 'krylov':
-        R, Q, _, _ = sorted_krylov_schur(P, m, z=z, tol=tol_krylov)
+        R, Q, eigenvalues, _ = sorted_krylov_schur(P, m, z=z, tol=tol_krylov)
     else:
         raise ValueError(f"Unknown method `{method!r}`.")
        
-    return R, Q
+    return R, Q, eigenvalues

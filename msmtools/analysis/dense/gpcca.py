@@ -83,7 +83,18 @@ def _find_twoblocks(R):
     validclusters = np.setdiff1d(np.arange(R.shape[0] + 1), badindices + 1)
     
     return validclusters
-  
+
+def _check_conj_splitting(eigenvalues, m):
+    """Utility function to check whether m cuts through a block of complex conjugates
+    """
+
+    if len(eigenvalues) < m:
+        raise ValueError(f'Not enough eigenvalues computed to check clustering into {m} states')
+
+    eigenval_in = eigenvalues[m - 1]
+    eigenval_out = eigenvalues[m]
+
+    return np.isclose(eigenval_in, np.conj(eigenval_out))
   
 def _gram_schmidt_mod(X, eta):
     r"""
@@ -247,17 +258,18 @@ def _do_schur(P, eta, m, z='LM', method='brandts', tol_krylov=1e-16):
         P_bar = np.diag(np.sqrt(eta)).dot(P).dot(np.diag(1. / np.sqrt(eta)))
 
     # Make a Schur decomposition of P_bar and sort the Schur vectors (and form).
-    R, Q = sorted_schur(P_bar, m, z, method, tol_krylov=tol_krylov) #Pbar!!!
-    if m - 1 not in _find_twoblocks(R): #TODO: Rethink this, mb only for stuff sorted with brandts...
-        warnings.warn("Coarse-graining with " + str(m) + " states cuts through "
-                      + "a block of complex conjugate eigenvalues in the Schur "
-                      + "form. The result will be of questionable meaning. "
-                      + "Please increase/decrease number of states by one.")
-    # Since the Schur form R and Schur vectors are only partially
-    # sorted, one doesn't need the whole R and Schur vector matrix Q.
-    # Take only the sorted Schur form and the vectors belonging to it.
-    R = R[:m, :m]
-    Q = Q[:, :m]
+    R, Q, eigenvalues = sorted_schur(P_bar, m, z, method, tol_krylov=tol_krylov) #Pbar!!!
+
+    # if m - 1 not in _find_twoblocks(R): #TODO: Rethink this, mb only for stuff sorted with brandts...
+    #     warnings.warn("Coarse-graining with " + str(m) + " states cuts through "
+    #                   + "a block of complex conjugate eigenvalues in the Schur "
+    #                   + "form. The result will be of questionable meaning. "
+    #                   + "Please increase/decrease number of states by one.")
+    # # Since the Schur form R and Schur vectors are only partially
+    # # sorted, one doesn't need the whole R and Schur vector matrix Q.
+    # # Take only the sorted Schur form and the vectors belonging to it.
+    # R = R[:m, :m]
+    # Q = Q[:, :m]
     
     # Orthonormalize the sorted Schur vectors Q via modified Gram-Schmidt-orthonormalization,
     # if the (Schur)vectors aren't orthogonal!
@@ -313,7 +325,7 @@ def _do_schur(P, eta, m, z='LM', method='brandts', tol_krylov=1e-16):
     if not np.allclose(X[:, 0], 1.0, atol=1e-8, rtol=1e-5):
         raise ValueError("The first column X[:, 0] of the Schur vector matrix isn't constantly equal 1.")
                   
-    return X, R
+    return X, R, eigenvalues
 
 
 def _objective(alpha, X):
@@ -1079,12 +1091,13 @@ class GPCCA(object):
 
         self.X = None
         self.R = None
+        self.eigenvalues = None
         self.z = z
         self.method = method
 
     def _do_schur_helper(self, m):
         n = np.shape(self.P)[0]
-        if self.X is not None and self.R is not None:
+        if self.X is not None and self.R is not None and self.eigenvalues is not None:
             Xdim1, Xdim2 = self.X.shape
             Rdim1, Rdim2 = self.R.shape
             if Xdim1 != n:
@@ -1096,9 +1109,20 @@ class GPCCA(object):
                 raise ValueError(f"The first dimension of X is `{Xdim1}`. This doesn't match "
                                  f"with the dimension of R [{Rdim1}, {Rdim2}].")
             if Rdim2 < m:
-                self.X, self.R = _do_schur(self.P, self.eta, m, self.z, self.method)
+                self.X, self.R, self.eigenvalues = _do_schur(self.P, self.eta, m, self.z, self.method)
+            else:
+                # if we are using pre-computed decomposition, check splitting
+                if m < n:
+                    if len(self.eigenvalues) < m+1:
+                        raise ValueError(f"Can't check compl. conj. block splitting for {m} clusters with only "
+                                         f"{len(self.eigenvalues)} eigenvalues")
+                    else:
+                        if _check_conj_splitting(self.eigenvalues, m):
+                            raise ValueError(f'Clustering into {m} clusters will split conjugate eigenvalues. '
+                                             f'Request one cluster more or less. ')
+                        print('INFO: Using pre-computed schur decomposition')
         else:
-            self.X, self.R = _do_schur(self.P, self.eta, m, self.z, self.method)
+            self.X, self.R, self.eigenvalues = _do_schur(self.P, self.eta, m, self.z, self.method)
 
     def minChi(self, m_min, m_max):
         r"""
@@ -1338,6 +1362,7 @@ class GPCCA(object):
         self._crispness = crispness_list[opt_idx]
         self._X = self.X[:, :self._m_opt]
         self._R = self.R[:self._m_opt, :self._m_opt]
+        self._eigenvalues = self.eigenvalues[:self._m_opt]
 
         # stationary distribution
         from msmtools.analysis import stationary_distribution as _stationary_distribution
@@ -1355,7 +1380,7 @@ class GPCCA(object):
         self._P_coarse = coarsegrain(self.P, self.eta, self._chi)
 
         if return_extra:
-            return self, self.X, self.R, chi_list, rot_matrix_list, crispness_list
+            return self, self.X, self.R, self.eigenvalues, chi_list, rot_matrix_list, crispness_list
 
         return self
 
@@ -1390,6 +1415,10 @@ class GPCCA(object):
     @property
     def schur_matrix(self):
         return self._R
+
+    @property
+    def top_eigenvalues(self):
+        return self._eigenvalues
     
     @property
     def cluster_crispness(self):
