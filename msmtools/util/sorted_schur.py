@@ -23,6 +23,15 @@ def _initialize_matrix(M, P):
         M.createDense(list(np.shape(P)), array=P)
 
 
+def _check_conj_split(m, eigenvalues):
+    """Utility function to check whether using m eigenvalues cuts through a block of complex conjugates
+    """
+    eigenval_in = eigenvalues[m - 1]
+    eigenval_out = eigenvalues[m]
+    
+    return np.isclose(eigenval_in, np.conj(eigenval_out))
+
+
 def top_eigenvalues(P, m, z='LM', tol=1e-16):
     r"""
     Sort `m+1` (if ``m < n``) or `m` (if ``m == n``) dominant eigenvalues 
@@ -252,9 +261,6 @@ def sorted_krylov_schur(P, m, z='LM', tol=1e-16):
 #                       + "is to large. The excess is cut off. This should be ok as long as no error "
 #                       + "is raised later, when testing, if the remaining subspace Q[:,:k] is an "
 #                       + "invariant subspace associated with the sorted top k eigenvalues.")
-    # Cut off, if too large.
-    Q = Subspace[:, :k]
-    R = R[:k, :k]
     
     # Gets the number of converged eigenpairs. 
     nconv = E.getConverged()
@@ -275,6 +281,12 @@ def sorted_krylov_schur(P, m, z='LM', tol=1e-16):
     # convert lists with eigenvalues and errors to arrays (while keeping excess eigenvalues and errors)
     top_eigenvals = np.asarray(top_eigenvals)
     top_eigenvals_error = np.asarray(top_eigenvals_error)
+
+    # check whether using m clusters would split a pair of complex conjugates
+
+    # Cut off, if too large.
+    Q = Subspace[:, :k]
+    R = R[:k, :k]
 
     dummy = np.dot(P, csr_matrix(Q) if issparse(P) else Q)
     if issparse(dummy):
@@ -391,9 +403,7 @@ def sorted_schur(P, m, z='LM', method='brandts', tol_krylov=1e-16):
 
         # check for splitting pairs of complex conjugates
         if (m < n):
-            eigenval_in = eigenvalues[m - 1]
-            eigenval_out = eigenvalues[m]
-            if np.isclose(eigenval_in, np.conj(eigenval_out)):
+            if _check_conj_split(m, eigenvalues):
                 raise ValueError(f'Clustering into {m} clusters will split conjugate eigenvalues. '
                                  f'Request one cluster more or less. ')
             Q, R, eigenvalues = Q[:, :m], R[:m, :m], eigenvalues
