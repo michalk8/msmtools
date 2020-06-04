@@ -35,6 +35,8 @@ def _check_conj_split(m, eigenvalues):
 def _check_schur(P, Q, R, eigenvalues, method = ""):
     """Utility function to run a number of checks on the sorted schur decomposition
     """
+    
+    m = len(eigenvalues)
 
     # check the dimensions
     if Q.shape[1] != len(eigenvalues):
