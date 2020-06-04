@@ -28,7 +28,7 @@ def _check_conj_split(m, eigenvalues):
     """
     eigenval_in = eigenvalues[m - 1]
     eigenval_out = eigenvalues[m]
-    
+
     return np.isclose(eigenval_in, np.conj(eigenval_out))
 
 
@@ -283,21 +283,26 @@ def sorted_krylov_schur(P, m, z='LM', tol=1e-16):
     top_eigenvals_error = np.asarray(top_eigenvals_error)
 
     # check whether using m clusters would split a pair of complex conjugates
+    if (m < n):
+        if _check_conj_split(m, top_eigenvals):
+            raise ValueError(f'Clustering into {m} clusters will split conjugate eigenvalues. '
+                             f'Request one cluster more or less. ')
 
-    # Cut off, if too large.
-    Q = Subspace[:, :k]
-    R = R[:k, :k]
+    # Cut off the one extra dimension we introduced, and any extra dim. that may stem from too many eigenvalues conv.
+    Q = Subspace[:, :m]
+    R = R[:m, :m]
+    top_eigenvals, top_eigenvals_error = top_eigenvals[:m+1], top_eigenvals_error[:m+1]
 
     dummy = np.dot(P, csr_matrix(Q) if issparse(P) else Q)
     if issparse(dummy):
         dummy = dummy.toarray()
 
-    dummy1 = np.dot(Q, np.diag(top_eigenvals[:k]))
+    dummy1 = np.dot(Q, np.diag(top_eigenvals[:m]))
 #     dummy2 = np.concatenate((dummy, dummy1), axis=1)
     dummy3 = subspace_angles(dummy, dummy1)
 #     test1 = ( ( matrix_rank(dummy2) - matrix_rank(dummy) ) == 0 )
     test2 = np.allclose(dummy3, 0.0, atol=1e-8, rtol=1e-5)
-    test3 = (dummy3.shape[0] == k)
+    test3 = (dummy3.shape[0] == m)
     dummy4 = subspace_angles(dummy, Q)
     test4 = np.allclose(dummy4, 0.0, atol=1e-6, rtol=1e-5)
     if not test4:
@@ -305,19 +310,19 @@ def sorted_krylov_schur(P, m, z='LM', tol=1e-16):
                          f"return an invariant subspace of P. The subspace angles are: `{dummy4}`.")
 #     elif not test1:
 #         warnings.warn("According to numpy.linalg.matrix_rank() Krylov-Schur didn't "
-#                       + "return the invariant subspace associated with the top k "
+#                       + "return the invariant subspace associated with the top m "
 #                       + " eigenvalues, since (P*Q|Q*L) (horizontally stacked) and P*Q don't "
 #                       + "have the same rank (L is a diagonal matrix with the "
 #                       + "sorted top eigenvalues on the diagonal).")
     elif not test2:
         warnings.warn(f"According to scipy.linalg.subspace_angles() Krylov-Schur didn't "
-                      f"return the invariant subspace associated with the top k eigenvalues, "
+                      f"return the invariant subspace associated with the top m eigenvalues, "
                       f"since the subspace angles between the column spaces of P*Q and Q*L "
                       f"aren't near zero (L is a diagonal matrix with the "
                       f"sorted top eigenvalues on the diagonal). The subspace angles are: `{dummy3}`.")
     elif not test3:
         warnings.warn("According to scipy.linalg.subspace_angles() the dimension of the "
-                      "column space of P*Q and/or Q*L is not equal to k (L is a diagonal "
+                      "column space of P*Q and/or Q*L is not equal to m (L is a diagonal "
                       "matrix with the sorted top eigenvalues on the diagonal).")
     
     return R, Q, top_eigenvals, top_eigenvals_error
