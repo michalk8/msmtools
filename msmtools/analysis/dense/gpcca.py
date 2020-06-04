@@ -1075,10 +1075,10 @@ class GPCCA(object):
         if method not in ['brandts', 'krylov']:
             raise ValueError("You didn't give a valid method to determine the invariant subspace.")
           
-        if issparse(P) and method != 'krylov':
-            warnings.warn("Sorted Schur decoposition via the method `brandts` is only implemented "
-                          "for dense matrices. Converting sparse transition matrix to dense ndarray.")
-            P = P.toarray()
+        # if issparse(P) and method != 'krylov':
+        #     warnings.warn("Sorted Schur decoposition via the method `brandts` is only implemented "
+        #                   "for dense matrices. Converting sparse transition matrix to dense ndarray.")
+        #     P = P.toarray()
 
         self.P = P
         if eta is None:
@@ -1109,7 +1109,7 @@ class GPCCA(object):
                 raise ValueError(f"The first dimension of X is `{Xdim1}`. This doesn't match "
                                  f"with the dimension of R [{Rdim1}, {Rdim2}].")
             if Rdim2 < m:
-                self.X, self.R, self.eigenvalues = _do_schur(self.P, self.eta, m, self.z, self.method)
+                self.X, self.R, self.eigenvalues = _do_schur(self.P.copy(), self.eta, m, self.z, self.method)
             else:
                 # if we are using pre-computed decomposition, check splitting
                 if m < n:
@@ -1122,7 +1122,7 @@ class GPCCA(object):
                                              f'Request one cluster more or less. ')
                         print('INFO: Using pre-computed schur decomposition')
         else:
-            self.X, self.R, self.eigenvalues = _do_schur(self.P, self.eta, m, self.z, self.method)
+            self.X, self.R, self.eigenvalues = _do_schur(self.P.copy(), self.eta, m, self.z, self.method)
 
     def minChi(self, m_min, m_max):
         r"""
@@ -1319,9 +1319,8 @@ class GPCCA(object):
         n_closed_components = len(closed_components)
         
         # Calculate Schur matrix R and Schur vector matrix X, if not adequately given.
-
         self._do_schur_helper(max(m_list))
-
+        
         # Initialize lists to collect results.
         chi_list = []
         rot_matrix_list = []
