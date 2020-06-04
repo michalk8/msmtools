@@ -32,110 +32,6 @@ def _check_conj_split(m, eigenvalues):
     return np.isclose(eigenval_in, np.conj(eigenval_out))
 
 
-def top_eigenvalues(P, m, z='LM', tol=1e-16):
-    r"""
-    Sort `m+1` (if ``m < n``) or `m` (if ``m == n``) dominant eigenvalues 
-    up and check (if ``m < n``), if clustering into `m` clusters would split 
-    a complex conjugated pair of eigenvalues.
-    
-    Parameters
-    ----------
-    P : ndarray (n,n)
-        Transition matrix (row-stochastic).
-        
-    m : int
-        Number of clusters to group into.
-        
-    z : string, (default='LM')
-        Specifies which portion of the spectrum is to be sought.
-        The subspace returned will be associated with this part of the spectrum.
-        Options are:
-        'LM': the m eigenvalues with the largest magnitude are sorted up.
-        'LR': the m eigenvalues with the largest real part are sorted up.
-
-    tol : float, (default=1e-16)
-        Convergence criterion used by SLEPc internally. If you are dealing with ill
-        conditioned matrices, consider decreasing this value to get accurate results.
-        
-    """    
-    n = P.shape[0]
-    if m < n:
-        k = m + 1
-    elif m == n:
-        k = m
-    
-#     if not ((m + 1) < (n - 1)):
-#         from scipy.linalg import eigvals
-#         eigenvals = eigvals(P)
-#         if np.any(np.isnan(eigenvals)):
-#             raise ValueError("Some eigenvalues of P are NaN.")
-#         if (z == 'LM'):
-#             idx = np.argsort(np.abs(eigenvals))
-#             sorted_eigenvals = eigenvals[idx]
-#             top_eigenvals = sorted_eigenvals[::-1][:m+1]
-#         elif (z == 'LR'):
-#             idx = np.argsort(np.real(eigenvals))
-#             sorted_eigenvals = eigenvals[idx]
-#             top_eigenvals = sorted_eigenvals[::-1][:m+1]
-#     else: 
-    from petsc4py import PETSc
-    from slepc4py import SLEPc 
-    
-    # Initialize boolean to indicate, if a 2x2-block is split.
-    block_split = False
-    
-    M = PETSc.Mat().create()
-    _initialize_matrix(M, P)
-    # Creates EPS object.
-    E = SLEPc.EPS()
-    E.create()
-    # Set the matrix associated with the eigenvalue problem.
-    E.setOperators(M)
-    # Select the particular solver to be used in the EPS object: Krylov-Schur
-    E.setType(SLEPc.EPS.Type.KRYLOVSCHUR)
-    # Set the number of eigenvalues to compute and the dimension of the subspace.
-    E.setDimensions(nev=k)
-    # set the tolerance used in the convergence criterion
-    E.setTolerances(tol=tol)
-    if z == 'LM':
-        E.setWhichEigenpairs(E.Which.LARGEST_MAGNITUDE)
-    elif z == 'LR':
-        E.setWhichEigenpairs(E.Which.LARGEST_REAL)
-    else:
-        raise ValueError(f"Invalid spectrum sorting options `{z}`. Valid options are: `'LM'`, `'LR'`")
-    # Solve the eigensystem.
-    E.solve()
-
-    # Gets the number of converged eigenpairs. 
-    nconv = E.getConverged()
-    # Warn, if nconv smaller than m.
-    if nconv < k:
-        warnings.warn(f"The number of converged eigenpairs `nconv={nconv}` is too small.")
-    # Collect the m dominant eigenvalues.
-    top_eigenvals = []
-    top_eigenvals_error = []
-    for i in range(nconv):
-        # Get the i-th eigenvalue as computed by solve().
-        eigenval = E.getEigenvalue(i)
-        top_eigenvals.append(eigenval)
-        # Computes the error (based on the residual norm) associated with the i-th computed eigenpair.
-        eigenval_error = E.computeError(i)
-        top_eigenvals_error.append(eigenval_error)
-    top_eigenvals = np.asarray(top_eigenvals)
-    top_eigenvals_error = np.asarray(top_eigenvals_error)
-    
-    if (m < n):
-        eigenval_in = top_eigenvals[m-1]
-        eigenval_out = top_eigenvals[m]
-        # Don't separate conjugate eigenvalues (corresponding to 2x2-block in R).
-        if np.isclose(eigenval_in, np.conj(eigenval_out)):
-            block_split = True
-            warnings.warn("Clustering into " + str(m) + " clusters will split conjugate eigenvalues! "
-                          "Request one cluster more or less.")
-                
-    return top_eigenvals, block_split
-
-
 def sorted_krylov_schur(P, m, z='LM', tol=1e-16):
     r"""
     Calculate an orthonormal basis of the subspace associated with the `m`
@@ -411,7 +307,7 @@ def sorted_schur(P, m, z='LM', method='brandts', tol_krylov=1e-16):
             if _check_conj_split(m, eigenvalues):
                 raise ValueError(f'Clustering into {m} clusters will split conjugate eigenvalues. '
                                  f'Request one cluster more or less. ')
-            Q, R, eigenvalues = Q[:, :m], R[:m, :m], eigenvalues
+            Q, R, eigenvalues = Q[:, :m], R[:m, :m], eigenvalues[:m+1]
 
         # Warnings
         if np.any(np.array(ap) > 1.0):
