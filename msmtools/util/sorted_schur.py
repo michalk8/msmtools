@@ -46,6 +46,11 @@ def _check_schur(P, Q, R, eigenvalues, method = ""):
     if R.shape[0] != Q.shape[1]:
         raise ValueError(f"First dimension in R does not match second dimension in Q for method `{method}`")
 
+    # check whether things are real
+    if not np.all(np.isreal(Q)):
+        raise TypeError(f"The orthonormal basis of the subspace returned by `{method}` is not real.",
+                        f"G-PCCA needs real basis vectors to work.")
+
     dummy = np.dot(P, csr_matrix(Q) if issparse(P) else Q)
     if issparse(dummy):
         dummy = dummy.toarray()
@@ -165,11 +170,6 @@ def sorted_krylov_schur(P, k, z='LM', tol=1e-16):
     # We take the sequence of 1-D arrays and stack them as columns to make a single 2-D array.
     Subspace = np.column_stack([x.array for x in E.getInvariantSubspace()])
 
-    # Raise, if X contains complex values!
-    if not np.all(np.isreal(Subspace)):
-        raise TypeError("The orthonormal basis of the subspace returned by Krylov-Schur is not real.",
-                        "G-PCCA needs real basis vectors to work.")
-
     # Get the schur form
     R = E.getDS().getMat(SLEPc.DS.MatType.A)
     R.view()
@@ -283,9 +283,9 @@ def sorted_schur(P, m, z='LM', method='brandts', tol_krylov=1e-16):
 
     # compute the sorted schur decomposition
     if method == 'brandts':
-        R, Q, eigenvalues = sorted_brandts_schur(P, k, z=z)
+        R, Q, eigenvalues = sorted_brandts_schur(P=P, k=k, z=z)
     elif method == 'krylov':
-        R, Q, eigenvalues, _ = sorted_krylov_schur(P, k, z=z, tol=tol_krylov)
+        R, Q, eigenvalues, _ = sorted_krylov_schur(P=P, k=k, z=z, tol=tol_krylov)
     else:
         raise ValueError(f"Unknown method `{method!r}`.")
 
@@ -294,10 +294,9 @@ def sorted_schur(P, m, z='LM', method='brandts', tol_krylov=1e-16):
         if _check_conj_split(m, eigenvalues):
             raise ValueError(f'Clustering into {m} clusters will split conjugate eigenvalues. '
                              f'Request one cluster more or less. ')
-        Q, R, eigenvalues = Q[:, :m], R[:m, :m], eigenvalues[:m + 1]
+        Q, R, eigenvalues = Q[:, :m], R[:m, :m], eigenvalues[:m+1]
 
     # check the returned schur decomposition
-
-
+    _check_schur(P=P, Q=Q, R=R, eigenvalues=eigenvalues, method=method)
        
     return R, Q, eigenvalues
