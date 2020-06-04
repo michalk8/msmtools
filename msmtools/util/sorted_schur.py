@@ -35,7 +35,7 @@ def _check_conj_split(m, eigenvalues):
 def _check_schur(P, Q, R, eigenvalues, method = ""):
     """Utility function to run a number of checks on the sorted schur decomposition
     """
-    
+
     m = len(eigenvalues)
 
     # check the dimensions
@@ -170,7 +170,7 @@ def sorted_krylov_schur(P, k, z='LM', tol=1e-16):
     # OPEN QUESTION: Are we sure that the returned basis vector are always real??
     # WE NEED REAL VECTORS! G-PCCA and PCCA only work with real vectors!!
     # We take the sequence of 1-D arrays and stack them as columns to make a single 2-D array.
-    Subspace = np.column_stack([x.array for x in E.getInvariantSubspace()])
+    Q = np.column_stack([x.array for x in E.getInvariantSubspace()])
 
     # Get the schur form
     R = E.getDS().getMat(SLEPc.DS.MatType.A)
