@@ -53,6 +53,8 @@ import scipy.sparse as sp
 from scipy.sparse import issparse
 from typing import Union, Tuple, Dict
 
+from msmtools.util.sorted_schur import _check_conj_split
+
 # Machine double floating precision:
 eps = np.finfo(np.float64).eps
 
@@ -84,17 +86,6 @@ def _find_twoblocks(R):
     
     return validclusters
 
-def _check_conj_splitting(eigenvalues, m):
-    """Utility function to check whether m cuts through a block of complex conjugates
-    """
-
-    if len(eigenvalues) < m:
-        raise ValueError(f'Not enough eigenvalues computed to check clustering into {m} states')
-
-    eigenval_in = eigenvalues[m - 1]
-    eigenval_out = eigenvalues[m]
-
-    return np.isclose(eigenval_in, np.conj(eigenval_out))
   
 def _gram_schmidt_mod(X, eta):
     r"""
@@ -1117,7 +1108,7 @@ class GPCCA(object):
                         raise ValueError(f"Can't check compl. conj. block splitting for {m} clusters with only "
                                          f"{len(self.eigenvalues)} eigenvalues")
                     else:
-                        if _check_conj_splitting(self.eigenvalues[:m]):
+                        if _check_conj_split(self.eigenvalues[:m]):
                             raise ValueError(f'Clustering into {m} clusters will split conjugate eigenvalues. '
                                              f'Request one cluster more or less. ')
                         print('INFO: Using pre-computed schur decomposition')
@@ -1327,14 +1318,17 @@ class GPCCA(object):
         crispness_list = []
         # Iterate over m
         for m in range(min(m_list), max(m_list) + 1):
-            if not (self.method == 'krylov'):
-                # Reduce R according to m.
-                Rm = self.R[:m, :m]
-                if m - 1 not in _find_twoblocks(Rm):
-                    warnings.warn(f"Coarse-graining with `{m}` states cuts through "
-                                  f"a block of complex conjugate eigenvalues in the Schur "
-                                  f"form. The result will be of questionable meaning. "
-                                  f"Please increase/decrease number of states by one.")
+            # Reduce R according to m.
+            Rm = self.R[:m, :m]
+
+            if len(self.eigenvalues) < m:
+                raise ValueError(f"Can't check compl. conj. block splitting for {m} clusters with only "
+                                 f"{len(self.eigenvalues)} eigenvalues")
+            else:
+                if _check_conj_split(self.eigenvalues[:m]):
+                    raise ValueError(f'Clustering into {m} clusters will split conjugate eigenvalues. '
+                                     f'Request one cluster more or less. ')
+
             ## Reduce X according to m and make a work copy.
             #Xm = np.copy(X[:, :m])
             chi, rot_matrix, crispness = _gpcca_core(self.X[:, :m])
