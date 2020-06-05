@@ -24,12 +24,18 @@ def _initialize_matrix(M, P):
 
 
 def _check_conj_split(m, eigenvalues):
-    """Utility function to check whether using m eigenvalues cuts through a block of complex conjugates
-    """
-    eigenval_in = eigenvalues[m - 1]
-    eigenval_out = eigenvalues[m]
+    """Check whether using m eigenvalues cuts through a block of complex conjugates.
 
-    return np.isclose(eigenval_in, np.conj(eigenval_out))
+    If the last (m'th) e-val is not real, check whether it forms a compl. conj. pair with the second last e-val. If
+    that's not the case, then choosing m clusters would cut through a block of complex conjugates.
+    """
+
+    last_eigenvalue, second_last_eigenvalue = eigenvalues[m], eigenvalues[m-1]
+    splits_block = False
+    if last_eigenvalue.imag > eps:
+        splits_block = not np.isclose(last_eigenvalue, np.conj(second_last_eigenvalue))
+
+    return splits_block
 
 
 def _check_schur(P, Q, R, eigenvalues, method = ""):
