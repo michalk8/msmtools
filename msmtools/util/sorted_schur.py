@@ -66,7 +66,7 @@ def _check_schur(P, Q, R, eigenvalues, method = ""):
     dummy4 = subspace_angles(dummy, Q)
     test4 = np.allclose(dummy4, 0.0, atol=1e-6, rtol=1e-5)
     if not test4:
-        raise ValueError(f"According to scipy.linalg.subspace_angles() `{method}` "
+        raise ValueError(f"According to scipy.linalg.subspace_angles() `{method}`  didn't "
                          f"return an invariant subspace of P. The subspace angles are: `{dummy4}`.")
     elif not test2:
         warnings.warn(f"According to scipy.linalg.subspace_angles() `{method}` didn't "
