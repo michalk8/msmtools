@@ -58,34 +58,6 @@ from msmtools.util.sorted_schur import _check_conj_split
 # Machine double floating precision:
 eps = np.finfo(np.float64).eps
 
-
-def _find_twoblocks(R):
-    r"""
-    This function checks the sorted part of the Schurform `R` for 2x2-blocks. 
-    If a 2x2-block (corresponding to two complex conjugate eigenvalues, that MUST NOT be splitted) 
-    at positions (``rr_i;i``, ``rr_i;i+1``, ``rr_i+1;i``, ``rr_i+1;i+1``) is found, the row-index ``i`
-    of the first row of the 2x2-block is identified as invalid row-index and ``n_cluster = i+1``
-    is excluded from the array of valid cluster numbers that is returned by this function.
-    
-    Parameters
-    ----------
-    R : ndarray (n,n)
-        (Partially) sorted real Schur matrix of
-        :math:`\tilde{P} = \mathtt{diag}(\sqrt{\eta}) P \mathtt{diag}(1.0. / \sqrt{eta})`
-        such that :math:`\tilde{P} Q = Q R` with the (partially) sorted matrix 
-        of Schur vectors :math:`Q` holds.
-        
-    Returns
-    -------
-    validclusters : ndarray (l,)
-        Array of valid cluster numbers.
-    """
-    
-    badindices = np.asarray(np.abs(np.diag(R, -1)) > 1000 * eps).nonzero()[0]
-    validclusters = np.setdiff1d(np.arange(R.shape[0] + 1), badindices + 1)
-    
-    return validclusters
-
   
 def _gram_schmidt_mod(X, eta):
     r"""
