@@ -70,7 +70,7 @@ def _check_schur(P, Q, R, eigenvalues, method = ""):
                          f"return an invariant subspace of P. The subspace angles are: `{dummy4}`.")
     elif not test2:
         warnings.warn(f"According to scipy.linalg.subspace_angles() `{method}` didn't "
-                      f"return the invariant subspace associated with the top m eigenvalues, "
+                      f"return the invariant subspace associated with the top k eigenvalues, "
                       f"since the subspace angles between the column spaces of P*Q and Q*L "
                       f"aren't near zero (L is a diagonal matrix with the "
                       f"sorted top eigenvalues on the diagonal). The subspace angles are: `{dummy3}`.")
@@ -82,7 +82,7 @@ def _check_schur(P, Q, R, eigenvalues, method = ""):
 
 def sorted_krylov_schur(P, k, z='LM', tol=1e-16):
     r"""
-    Calculate an orthonormal basis of the subspace associated with the `m`
+    Calculate an orthonormal basis of the subspace associated with the `k`
     dominant eigenvalues of `P` using the Krylov-Schur method as implemented
     in SLEPc.
     ------------------------------------------------------------------------
@@ -110,7 +110,7 @@ def sorted_krylov_schur(P, k, z='LM', tol=1e-16):
     P : ndarray (n,n)
         Transition matrix (row-stochastic).
         
-    m : int
+    k : int
         Number of clusters to group into.
         
     z : string, (default='LM')
