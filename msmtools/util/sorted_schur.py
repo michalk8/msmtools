@@ -300,8 +300,9 @@ def sorted_schur(P, m, z='LM', method='brandts', tol_krylov=1e-16):
     # check for splitting pairs of complex conjugates
     if (m < n):
         if _check_conj_split(eigenvalues[:m]):
-            raise ValueError(f'Clustering into {m} clusters will split conjugate eigenvalues. '
-                             f'Request one cluster more or less. ')
+            warnings.warn(f"Clustering into {m} clusters will split conjugate eigenvalues. "
+                          f"Increasing `m` to {m+1} ")
+            m += 1
         Q, R, eigenvalues = Q[:, :m], R[:m, :m], eigenvalues[:m]
 
     # check the returned schur decomposition
