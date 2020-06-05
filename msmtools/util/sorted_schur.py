@@ -302,9 +302,9 @@ def sorted_schur(P, m, z='LM', method='brandts', tol_krylov=1e-16):
         if _check_conj_split(eigenvalues[:m]):
             raise ValueError(f'Clustering into {m} clusters will split conjugate eigenvalues. '
                              f'Request one cluster more or less. ')
-        Q, R, eigenvalues = Q[:, :m], R[:m, :m], eigenvalues[:m+1]
+        Q, R, eigenvalues = Q[:, :m], R[:m, :m], eigenvalues[:m]
 
     # check the returned schur decomposition
-    _check_schur(P=P, Q=Q, R=R, eigenvalues=eigenvalues[:m], method=method)
+    _check_schur(P=P, Q=Q, R=R, eigenvalues=eigenvalues, method=method)
        
     return R, Q, eigenvalues
