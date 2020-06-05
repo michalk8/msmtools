@@ -827,6 +827,9 @@ def gpcca_coarsegrain(P, m, eta=None, z='LM', method='brandts'):
 
     chi = GPCCA(P, eta, z, method).optimize(m).memberships
     W = np.linalg.pinv(np.dot(chi.T, np.diag(eta)).dot(chi))
+    #todo just change the computation of A to work correctly with sparse matrices
+    if issparse(P):
+        P = P.toarray()
     A = np.dot(chi.T, np.diag(eta)).dot(P).dot(chi)
     P_coarse = W.dot(A)
                        
