@@ -214,7 +214,7 @@ def sorted_brandts_schur(P, k, z='LM'):
     if np.any(np.array(ap) > 1.0):
         warnings.warn("Reordering of Schur matrix was inaccurate.")
 
-    # comptue eigenvalues
+    # compute eigenvalues
     T, _ = rsf2csf(R, Q)
     eigenvalues = np.diag(T)[:k]
 
