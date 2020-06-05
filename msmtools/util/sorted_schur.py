@@ -23,14 +23,14 @@ def _initialize_matrix(M, P):
         M.createDense(list(np.shape(P)), array=P)
 
 
-def _check_conj_split(m, eigenvalues):
+def _check_conj_split(eigenvalues):
     """Check whether using m eigenvalues cuts through a block of complex conjugates.
 
     If the last (m'th) e-val is not real, check whether it forms a compl. conj. pair with the second last e-val. If
     that's not the case, then choosing m clusters would cut through a block of complex conjugates.
     """
 
-    last_eigenvalue, second_last_eigenvalue = eigenvalues[m], eigenvalues[m-1]
+    last_eigenvalue, second_last_eigenvalue = eigenvalues[-1], eigenvalues[-2]
     splits_block = False
     if last_eigenvalue.imag > eps:
         splits_block = not np.isclose(last_eigenvalue, np.conj(second_last_eigenvalue))
@@ -299,7 +299,7 @@ def sorted_schur(P, m, z='LM', method='brandts', tol_krylov=1e-16):
 
     # check for splitting pairs of complex conjugates
     if (m < n):
-        if _check_conj_split(m, eigenvalues):
+        if _check_conj_split(eigenvalues[:m]):
             raise ValueError(f'Clustering into {m} clusters will split conjugate eigenvalues. '
                              f'Request one cluster more or less. ')
         Q, R, eigenvalues = Q[:, :m], R[:m, :m], eigenvalues[:m+1]
