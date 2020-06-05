@@ -748,7 +748,7 @@ def coarsegrain(P, eta, chi):
     return P_coarse
 
 
-def gpcca_coarsegrain(P, eta, m, z='LM', method='brandts'):
+def gpcca_coarsegrain(P, m, eta=None, z='LM', method='brandts'):
     r"""
     Coarse-grains the transition matrix `P` to `m` sets using G-PCCA.
     Performs optimized spectral clustering via G-PCCA and coarse-grains
@@ -822,6 +822,9 @@ def gpcca_coarsegrain(P, eta, m, z='LM', method='brandts'):
     
     """                  
     #Matlab: Pc = pinv(chi'*diag(eta)*chi)*(chi'*diag(eta)*P*chi)
+    if eta is None:
+        eta = np.true_divide(np.ones(P.shape[0]), P.shape[0])
+
     chi = GPCCA(P, eta, z, method).optimize(m).memberships
     W = np.linalg.pinv(np.dot(chi.T, np.diag(eta)).dot(chi))
     A = np.dot(chi.T, np.diag(eta)).dot(P).dot(chi)
