@@ -1113,11 +1113,11 @@ class GPCCA(object):
             else:
                 # if we are using pre-computed decomposition, check splitting
                 if m < n:
-                    if len(self.eigenvalues) < m+1:
+                    if len(self.eigenvalues) < m:
                         raise ValueError(f"Can't check compl. conj. block splitting for {m} clusters with only "
                                          f"{len(self.eigenvalues)} eigenvalues")
                     else:
-                        if _check_conj_splitting(self.eigenvalues, m):
+                        if _check_conj_splitting(self.eigenvalues[:m]):
                             raise ValueError(f'Clustering into {m} clusters will split conjugate eigenvalues. '
                                              f'Request one cluster more or less. ')
                         print('INFO: Using pre-computed schur decomposition')
