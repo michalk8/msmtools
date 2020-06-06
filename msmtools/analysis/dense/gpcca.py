@@ -53,48 +53,11 @@ import scipy.sparse as sp
 from scipy.sparse import issparse
 from typing import Union, Tuple, Dict
 
+from msmtools.util.sorted_schur import _check_conj_split
+
 # Machine double floating precision:
 eps = np.finfo(np.float64).eps
 
-
-def _find_twoblocks(R):
-    r"""
-    This function checks the sorted part of the Schurform `R` for 2x2-blocks. 
-    If a 2x2-block (corresponding to two complex conjugate eigenvalues, that MUST NOT be splitted) 
-    at positions (``rr_i;i``, ``rr_i;i+1``, ``rr_i+1;i``, ``rr_i+1;i+1``) is found, the row-index ``i`
-    of the first row of the 2x2-block is identified as invalid row-index and ``n_cluster = i+1``
-    is excluded from the array of valid cluster numbers that is returned by this function.
-    
-    Parameters
-    ----------
-    R : ndarray (n,n)
-        (Partially) sorted real Schur matrix of
-        :math:`\tilde{P} = \mathtt{diag}(\sqrt{\eta}) P \mathtt{diag}(1.0. / \sqrt{eta})`
-        such that :math:`\tilde{P} Q = Q R` with the (partially) sorted matrix 
-        of Schur vectors :math:`Q` holds.
-        
-    Returns
-    -------
-    validclusters : ndarray (l,)
-        Array of valid cluster numbers.
-    """
-    
-    badindices = np.asarray(np.abs(np.diag(R, -1)) > 1000 * eps).nonzero()[0]
-    validclusters = np.setdiff1d(np.arange(R.shape[0] + 1), badindices + 1)
-    
-    return validclusters
-
-def _check_conj_splitting(eigenvalues, m):
-    """Utility function to check whether m cuts through a block of complex conjugates
-    """
-
-    if len(eigenvalues) < m:
-        raise ValueError(f'Not enough eigenvalues computed to check clustering into {m} states')
-
-    eigenval_in = eigenvalues[m - 1]
-    eigenval_out = eigenvalues[m]
-
-    return np.isclose(eigenval_in, np.conj(eigenval_out))
   
 def _gram_schmidt_mod(X, eta):
     r"""
@@ -259,17 +222,6 @@ def _do_schur(P, eta, m, z='LM', method='brandts', tol_krylov=1e-16):
 
     # Make a Schur decomposition of P_bar and sort the Schur vectors (and form).
     R, Q, eigenvalues = sorted_schur(P_bar, m, z, method, tol_krylov=tol_krylov) #Pbar!!!
-
-    # if m - 1 not in _find_twoblocks(R): #TODO: Rethink this, mb only for stuff sorted with brandts...
-    #     warnings.warn("Coarse-graining with " + str(m) + " states cuts through "
-    #                   + "a block of complex conjugate eigenvalues in the Schur "
-    #                   + "form. The result will be of questionable meaning. "
-    #                   + "Please increase/decrease number of states by one.")
-    # # Since the Schur form R and Schur vectors are only partially
-    # # sorted, one doesn't need the whole R and Schur vector matrix Q.
-    # # Take only the sorted Schur form and the vectors belonging to it.
-    # R = R[:m, :m]
-    # Q = Q[:, :m]
     
     # Orthonormalize the sorted Schur vectors Q via modified Gram-Schmidt-orthonormalization,
     # if the (Schur)vectors aren't orthogonal!
@@ -796,7 +748,7 @@ def coarsegrain(P, eta, chi):
     return P_coarse
 
 
-def gpcca_coarsegrain(P, eta, m, z='LM', method='brandts'):
+def gpcca_coarsegrain(P, m, eta=None, z='LM', method='brandts'):
     r"""
     Coarse-grains the transition matrix `P` to `m` sets using G-PCCA.
     Performs optimized spectral clustering via G-PCCA and coarse-grains
@@ -870,8 +822,14 @@ def gpcca_coarsegrain(P, eta, m, z='LM', method='brandts'):
     
     """                  
     #Matlab: Pc = pinv(chi'*diag(eta)*chi)*(chi'*diag(eta)*P*chi)
+    if eta is None:
+        eta = np.true_divide(np.ones(P.shape[0]), P.shape[0])
+
     chi = GPCCA(P, eta, z, method).optimize(m).memberships
     W = np.linalg.pinv(np.dot(chi.T, np.diag(eta)).dot(chi))
+    #todo just change the computation of A to work correctly with sparse matrices
+    if issparse(P):
+        P = P.toarray()
     A = np.dot(chi.T, np.diag(eta)).dot(P).dot(chi)
     P_coarse = W.dot(A)
                        
@@ -1075,10 +1033,10 @@ class GPCCA(object):
         if method not in ['brandts', 'krylov']:
             raise ValueError("You didn't give a valid method to determine the invariant subspace.")
           
-        if issparse(P) and method != 'krylov':
-            warnings.warn("Sorted Schur decoposition via the method `brandts` is only implemented "
-                          "for dense matrices. Converting sparse transition matrix to dense ndarray.")
-            P = P.toarray()
+        # if issparse(P) and method != 'krylov':
+        #     warnings.warn("Sorted Schur decoposition via the method `brandts` is only implemented "
+        #                   "for dense matrices. Converting sparse transition matrix to dense ndarray.")
+        #     P = P.toarray()
 
         self.P = P
         if eta is None:
@@ -1109,20 +1067,20 @@ class GPCCA(object):
                 raise ValueError(f"The first dimension of X is `{Xdim1}`. This doesn't match "
                                  f"with the dimension of R [{Rdim1}, {Rdim2}].")
             if Rdim2 < m:
-                self.X, self.R, self.eigenvalues = _do_schur(self.P, self.eta, m, self.z, self.method)
+                self.X, self.R, self.eigenvalues = _do_schur(self.P.copy(), self.eta, m, self.z, self.method)
             else:
                 # if we are using pre-computed decomposition, check splitting
                 if m < n:
-                    if len(self.eigenvalues) < m+1:
+                    if len(self.eigenvalues) < m:
                         raise ValueError(f"Can't check compl. conj. block splitting for {m} clusters with only "
                                          f"{len(self.eigenvalues)} eigenvalues")
                     else:
-                        if _check_conj_splitting(self.eigenvalues, m):
+                        if _check_conj_split(self.eigenvalues[:m]):
                             raise ValueError(f'Clustering into {m} clusters will split conjugate eigenvalues. '
                                              f'Request one cluster more or less. ')
                         print('INFO: Using pre-computed schur decomposition')
         else:
-            self.X, self.R, self.eigenvalues = _do_schur(self.P, self.eta, m, self.z, self.method)
+            self.X, self.R, self.eigenvalues = _do_schur(self.P.copy(), self.eta, m, self.z, self.method)
 
     def minChi(self, m_min, m_max):
         r"""
@@ -1319,23 +1277,25 @@ class GPCCA(object):
         n_closed_components = len(closed_components)
         
         # Calculate Schur matrix R and Schur vector matrix X, if not adequately given.
-
         self._do_schur_helper(max(m_list))
-
+        
         # Initialize lists to collect results.
         chi_list = []
         rot_matrix_list = []
         crispness_list = []
         # Iterate over m
         for m in range(min(m_list), max(m_list) + 1):
-            if not (self.method == 'krylov'):
-                # Reduce R according to m.
-                Rm = self.R[:m, :m]
-                if m - 1 not in _find_twoblocks(Rm):
-                    warnings.warn(f"Coarse-graining with `{m}` states cuts through "
-                                  f"a block of complex conjugate eigenvalues in the Schur "
-                                  f"form. The result will be of questionable meaning. "
-                                  f"Please increase/decrease number of states by one.")
+            # Reduce R according to m.
+            Rm = self.R[:m, :m]
+
+            if len(self.eigenvalues) < m:
+                raise ValueError(f"Can't check compl. conj. block splitting for {m} clusters with only "
+                                 f"{len(self.eigenvalues)} eigenvalues")
+            else:
+                if _check_conj_split(self.eigenvalues[:m]):
+                    raise ValueError(f'Clustering into {m} clusters will split conjugate eigenvalues. '
+                                     f'Request one cluster more or less. ')
+
             ## Reduce X according to m and make a work copy.
             #Xm = np.copy(X[:, :m])
             chi, rot_matrix, crispness = _gpcca_core(self.X[:, :m])
