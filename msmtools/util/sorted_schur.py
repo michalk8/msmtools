@@ -269,14 +269,14 @@ def sorted_schur(P, m, z='LM', method='brandts', tol_krylov=1e-16):
         try:
             from petsc4py import PETSc
             from slepc4py import SLEPc
-        except ImportError:
+        except ModuleNotFoundError:
             global _no_slepc_error_msg_shown
             if not _no_slepc_error_msg_shown:
                 print(f"Unable to import PETSc or SLEPc.\n"
                       f"You can install it from: https://slepc4py.readthedocs.io/en/stable/install.html\n"
                       f"Defaulting to `method='{_default_schur_method}'`.")
                 _no_slepc_error_msg_shown = True
-                method = _default_schur_method
+            method = _default_schur_method
 
     if method != 'krylov' and issparse(P):
         warnings.warn("Sparse implementation is only avaiable for `method='krylov'`, densifying.")
