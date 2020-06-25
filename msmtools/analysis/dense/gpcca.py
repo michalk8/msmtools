@@ -272,7 +272,7 @@ def _do_schur(P, eta, m, z='LM', method='brandts', tol_krylov=1e-16):
         warnings.warn("According to scipy.linalg.subspace_angles() the dimension of the "
                       "column spaces of P*X and/or X*R (resp. X, if you chose the "
                       "Krylov-Schur method) is not equal to m.")
-        
+
     # Raise, if the first column X[:,0] of the Schur vector matrix isn't constantly equal 1!
     if not np.allclose(X[:, 0], 1.0, atol=1e-8, rtol=1e-5):
         raise ValueError("The first column X[:, 0] of the Schur vector matrix isn't constantly equal 1.")
@@ -736,16 +736,14 @@ def coarsegrain(P, eta, chi):
     
     """
     #Matlab: Pc = pinv(chi'*diag(eta)*chi)*(chi'*diag(eta)*P*chi)
-    W = np.linalg.pinv(np.dot(chi.T, np.diag(eta)).dot(chi))
-    if issparse(P):
-        V = np.dot(sp.csr_matrix(chi.T), sp.dia_matrix(([eta], [0]), shape=(eta.shape[0], eta.shape[0])))
-    else:
-        V = np.dot(chi.T, np.diag(eta))
 
+    # need to make sure here that memory does not explode, and P is never densified
+    W = np.linalg.pinv(chi.T.dot(chi*eta[:, None]))
+    V = chi.T*eta
+    if issparse(P): V = sp.csr_matrix(V)
     A = V.dot(P).dot(chi)
-    P_coarse = W.dot(A)
 
-    return P_coarse
+    return W.dot(A)
 
 
 def gpcca_coarsegrain(P, m, eta=None, z='LM', method='brandts'):
@@ -1327,7 +1325,7 @@ class GPCCA(object):
         # stationary distribution
         from msmtools.analysis import stationary_distribution as _stationary_distribution
         try:
-            self._pi = _stationary_distribution(self.P) #TODO: Use eigenvec based calc as standard instead of backward committor
+            self._pi = _stationary_distribution(self.P)
             # coarse-grained stationary distribution
             self._pi_coarse = np.dot(self._chi.T, self._pi)
         except ValueError as err:
