@@ -230,7 +230,7 @@ def _do_schur(P, eta, m, z='LM', method='brandts', tol_krylov=1e-16):
         Q = _gram_schmidt_mod(Q, eta)
         # Transform the orthonormalized Schur vectors of P_bar back 
         # to orthonormalized Schur vectors X of P.
-        X = Q / np.sqrt(eta)[:, None]
+        X = np.true_divide(Q, np.sqrt(eta)[:, None])
     else:
         # Search for the constant (Schur) vector, if explicitly present.
         n, m = Q.shape
