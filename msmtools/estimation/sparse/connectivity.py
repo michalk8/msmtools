@@ -25,8 +25,10 @@ r"""This module implements the connectivity functionality
 import numpy as np
 import scipy.sparse
 import scipy.sparse.csgraph as csgraph
+from memory_profiler import profile
 
 
+@profile(stream=open("conn_sets", "w+"), precision=4)
 def connected_sets(C, directed=True):
     r"""Compute connected components for a directed graph with weights
     represented by the given count matrix.
