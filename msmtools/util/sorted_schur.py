@@ -6,6 +6,10 @@ from scipy.linalg import schur, subspace_angles
 from msmtools.util.sort_real_schur import sort_real_schur
 from scipy.sparse import issparse, isspmatrix_csr, csr_matrix
 from scipy.linalg import rsf2csf
+from functools import partial
+from memory_profiler import profile
+
+profile = partial(profile, precision=4)
 
 # Machine double floating precision:
 eps = np.finfo(np.float64).eps
@@ -13,6 +17,7 @@ _no_slepc_error_msg_shown = False
 _default_schur_method = 'brandts'
 
 
+@profile
 def _initialize_matrix(M, P):
     if issparse(P):
         if not isspmatrix_csr(P):
@@ -23,6 +28,7 @@ def _initialize_matrix(M, P):
         M.createDense(list(np.shape(P)), array=P)
 
 
+@profile
 def _check_conj_split(eigenvalues):
     """Check whether using m eigenvalues cuts through a block of complex conjugates.
 
@@ -38,6 +44,7 @@ def _check_conj_split(eigenvalues):
     return splits_block
 
 
+@profile
 def _check_schur(P, Q, R, eigenvalues, method = ""):
     """Utility function to run a number of checks on the sorted schur decomposition
     """
@@ -86,6 +93,7 @@ def _check_schur(P, Q, R, eigenvalues, method = ""):
                       f"matrix with the sorted top eigenvalues on the diagonal), method = `{method}`")
 
 
+@profile
 def sorted_krylov_schur(P, k, z='LM', tol=1e-16):
     r"""
     Calculate an orthonormal basis of the subspace associated with the `k`
@@ -206,6 +214,7 @@ def sorted_krylov_schur(P, k, z='LM', tol=1e-16):
     return R, Q, eigenvalues, eigenvalues_error
 
 
+@profile
 def sorted_brandts_schur(P, k, z='LM'):
     """Utility function to compute a sorted schur decomp. using scipy for the decomp. and `brandts` for sorting
     """
@@ -227,6 +236,7 @@ def sorted_brandts_schur(P, k, z='LM'):
     return R, Q, eigenvalues
 
 
+@profile
 def sorted_schur(P, m, z='LM', method='brandts', tol_krylov=1e-16):
     r"""
     Return `m` dominant real Schur vectors or an orthonormal basis
