@@ -57,6 +57,8 @@ from memory_profiler import profile
 
 from msmtools.util.sorted_schur import _check_conj_split
 
+print("Profiling GPCCA")
+
 # Machine double floating precision:
 eps = np.finfo(np.float64).eps
 profile = partial(profile, precision=4)
