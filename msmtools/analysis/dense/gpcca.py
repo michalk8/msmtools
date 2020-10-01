@@ -62,7 +62,7 @@ eps = np.finfo(np.float64).eps
 profile = partial(profile, precision=4)
 
 
-@profile
+@profile(stream=open("gram_schmidt_mod", "w+"))
 def _gram_schmidt_mod(X, eta):
     r"""
     Function to :math:`\eta`-orthonormalize Schur vectors - modified numerically stable version.
@@ -139,7 +139,7 @@ def _gram_schmidt_mod(X, eta):
     return Q
 
 
-@profile
+@profile(stream=open("do_schur", "w+"))
 def _do_schur(P, eta, m, z='LM', method='brandts', tol_krylov=1e-16):
     r"""
     This function performs a Schur decomposition of the (n,n) transition matrix `P`, with due regard 
@@ -285,7 +285,7 @@ def _do_schur(P, eta, m, z='LM', method='brandts', tol_krylov=1e-16):
     return X, R, eigenvalues
 
 
-@profile
+@profile(stream=open("objective", "w+"))
 def _objective(alpha, X):
     r"""
     Compute objective function value.
@@ -361,7 +361,7 @@ def _objective(alpha, X):
     return optval
   
 
-@profile
+@profile(stream=open("initialize_rot_matrix", "w+"))
 def _initialize_rot_matrix(X):
     r"""
     Initialize the rotation (m,m)-matrix. 
@@ -398,7 +398,7 @@ def _initialize_rot_matrix(X):
     return rot_matrix
  
 
-@profile
+@profile(stream=open("indexsearch", "w+"))
 def _indexsearch(X):
     r"""
     Function to find a simplex structure in the data.
@@ -463,7 +463,7 @@ def _indexsearch(X):
     return index
 
 
-@profile
+@profile(stream=open("opt_soft", "w+"))
 def _opt_soft(X, rot_matrix):
     r"""
     Optimizes the G-PCCA rotation matrix such that the memberships are exclusively non-negative
@@ -540,7 +540,7 @@ def _opt_soft(X, rot_matrix):
     return rot_matrix, chi, fopt
   
 
-@profile
+@profile(stream=open("fill_matrix", "w+"))
 def _fill_matrix(rot_matrix, X):
     r"""
     Make the rotation matrix feasible.
@@ -586,7 +586,7 @@ def _fill_matrix(rot_matrix, X):
     return rot_matrix
 
 
-@profile
+@profile(stream=open("cluster_by_isa", "w+"))
 def _cluster_by_isa(X):
     r"""
     Classification of dynamical data based on ``m`` orthonormal Schur vectors 
@@ -637,7 +637,7 @@ def _cluster_by_isa(X):
     return chi, minChi
 
 
-@profile
+@profile(stream=open("gpcca_core", "w+"))
 def _gpcca_core(X):
     r"""
     Core of the G-PCCA [1]_ spectral clustering method with optimized memberships.
@@ -704,7 +704,7 @@ def _gpcca_core(X):
     return chi, rot_matrix, crispness
     
 
-@profile
+@profile(stream=open("coarsegrain", "w+"))
 def coarsegrain(P, eta, chi):
     r"""
     Coarse-grains `P` such that the (dominant) Perron eigenvalues are preserved, using:
@@ -759,7 +759,7 @@ def coarsegrain(P, eta, chi):
     return W.dot(A)
 
 
-@profile
+@profile(stream=open("gpcca_coarsegrain", "w+"))
 def gpcca_coarsegrain(P, m, eta=None, z='LM', method='brandts'):
     r"""
     Coarse-grains the transition matrix `P` to `m` sets using G-PCCA.
@@ -1065,7 +1065,7 @@ class GPCCA(object):
         self.z = z
         self.method = method
 
-    @profile
+    @profile(stream=open("do_schur_helper", "w+"))
     def _do_schur_helper(self, m):
         n = np.shape(self.P)[0]
         if self.X is not None and self.R is not None and self.eigenvalues is not None:
@@ -1151,7 +1151,7 @@ class GPCCA(object):
         return minChi_list
 
     # G-PCCA coarse-graining
-    @profile
+    @profile(stream=open("optimize", "w+"))
     def optimize(self, m: Union[int, Tuple[int, int], Dict[str, int]],
                  return_extra: bool = False):
         r"""
