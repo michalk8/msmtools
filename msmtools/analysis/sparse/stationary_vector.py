@@ -30,6 +30,12 @@ import scipy.sparse.linalg
 
 from scipy.sparse import eye
 from scipy.sparse.linalg import factorized
+
+from functools import partial
+from memory_profiler import profile
+
+profile = partial(profile, precision=4)
+
 EPS = np.finfo(np.float64).eps
 
 
@@ -99,6 +105,7 @@ def stationary_distribution_from_backward_iteration(P, eps=1e-15):
     return pi
 
 
+@profile(stream=open("stationary_dist_from_evec", "w+"))
 def stationary_distribution_from_eigenvector(T, ncv=None):
     r"""Compute stationary distribution of stochastic matrix T.
 
