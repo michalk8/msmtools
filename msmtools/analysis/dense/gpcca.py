@@ -524,7 +524,7 @@ def _opt_soft(X, rot_matrix):
             raise ValueError("Some elements of chi are 'significantly' negative (<" + str(-10*eps) + ")")
         else:
             chi[chi < 0.0] = 0.0
-            chi = np.diag(np.true_divide(1.0, np.sum(chi, axis=1))).dot(chi)
+            chi = np.true_divide(1.0, np.sum(chi, axis=1))[:, np.newaxis] * chi
             if not np.allclose(np.sum(chi, axis=1), 1.0, atol=1e-8, rtol=1e-5):
                 raise ValueError("The rows of chi don't sum up to 1.0 after rescaling")
             
