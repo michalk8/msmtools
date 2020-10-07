@@ -17,7 +17,7 @@ _no_slepc_error_msg_shown = False
 _default_schur_method = 'brandts'
 
 
-@profile(stream=open("init_mat", "w+"))
+@profile
 def _initialize_matrix(M, P):
     if issparse(P):
         if not isspmatrix_csr(P):
@@ -28,7 +28,7 @@ def _initialize_matrix(M, P):
         M.createDense(list(np.shape(P)), array=P)
 
 
-@profile(stream=open("_check_conf_split", "w+"))
+@profile
 def _check_conj_split(eigenvalues):
     """Check whether using m eigenvalues cuts through a block of complex conjugates.
 
@@ -44,7 +44,7 @@ def _check_conj_split(eigenvalues):
     return splits_block
 
 
-@profile(stream=open("_check_schur", "w+"))
+@profile
 def _check_schur(P, Q, R, eigenvalues, method = ""):
     """Utility function to run a number of checks on the sorted schur decomposition
     """
@@ -93,7 +93,7 @@ def _check_schur(P, Q, R, eigenvalues, method = ""):
                       f"matrix with the sorted top eigenvalues on the diagonal), method = `{method}`")
 
 
-@profile(stream=open("sorted_krylov_schur", "w+"))
+@profile
 def sorted_krylov_schur(P, k, z='LM', tol=1e-16):
     r"""
     Calculate an orthonormal basis of the subspace associated with the `k`

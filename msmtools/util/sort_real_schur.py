@@ -21,9 +21,11 @@
 # Based on the original Matlab File Version: 1.0
 
 import numpy as np
+from memory_profiler import profile
 
 expensive_asserts = False
 
+@profile
 def sort_real_schur(Q, R, z, b, inplace=False):
     r'''
     :param Q: np.array((N, N))

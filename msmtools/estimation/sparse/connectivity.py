@@ -28,7 +28,7 @@ import scipy.sparse.csgraph as csgraph
 from memory_profiler import profile
 
 
-@profile(stream=open("conn_sets", "w+"), precision=4)
+@profile
 def connected_sets(C, directed=True):
     r"""Compute connected components for a directed graph with weights
     represented by the given count matrix.

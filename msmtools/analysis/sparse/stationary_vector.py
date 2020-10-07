@@ -105,7 +105,7 @@ def stationary_distribution_from_backward_iteration(P, eps=1e-15):
     return pi
 
 
-@profile(stream=open("stationary_dist_from_evec", "w+"))
+@profile
 def stationary_distribution_from_eigenvector(T, ncv=None):
     r"""Compute stationary distribution of stochastic matrix T.
 
