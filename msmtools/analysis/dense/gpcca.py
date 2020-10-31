@@ -735,12 +735,13 @@ def coarsegrain(P, eta, chi):
     ----------------------------------------------
     
     """
-    #Matlab: Pc = pinv(chi'*diag(eta)*chi)*(chi'*diag(eta)*P*chi)
+    # Matlab: Pc = pinv(chi'*diag(eta)*chi)*(chi'*diag(eta)*P*chi)
 
     # need to make sure here that memory does not explode, and P is never densified
-    W = np.linalg.pinv(chi.T.dot(chi*eta[:, None]))
-    V = chi.T*eta
-    if issparse(P): V = sp.csr_matrix(V)
+    W = np.linalg.pinv(chi.T.dot(chi * eta[:, None]))
+    V = chi.T * eta
+    if issparse(P):
+        V = sp.csr_matrix(V)
     A = V.dot(P).dot(chi)
 
     return W.dot(A)
@@ -794,7 +795,7 @@ def gpcca_coarsegrain(P, m, eta=None, z='LM', method='brandts'):
          Use with CAUTION! 
          ----------------------------------------------------
          To use this method you need to have petsc, petsc4py, 
-         selpc, and slepc4py installed. For optimal performance 
+         slepc, and slepc4py installed. For optimal performance
          it is highly recommended that you also have mpi 
          (at least version 2) and mpi4py installed.
 
@@ -819,19 +820,13 @@ def gpcca_coarsegrain(P, m, eta=None, z='LM', method='brandts'):
     ----------------------------------------------
     
     """                  
-    #Matlab: Pc = pinv(chi'*diag(eta)*chi)*(chi'*diag(eta)*P*chi)
+    # Matlab: Pc = pinv(chi'*diag(eta)*chi)*(chi'*diag(eta)*P*chi)
     if eta is None:
         eta = np.true_divide(np.ones(P.shape[0]), P.shape[0])
 
     chi = GPCCA(P, eta, z, method).optimize(m).memberships
-    W = np.linalg.pinv(np.dot(chi.T, np.diag(eta)).dot(chi))
-    #todo just change the computation of A to work correctly with sparse matrices
-    if issparse(P):
-        P = P.toarray()
-    A = np.dot(chi.T, np.diag(eta)).dot(P).dot(chi)
-    P_coarse = W.dot(A)
-                       
-    return P_coarse
+
+    return coarsegrain(P, chi, eta)
 
 
 class GPCCA(object):
@@ -1123,7 +1118,12 @@ class GPCCA(object):
             raise ValueError(f"m_min ({m_min}) must be smaller than m_max ({m_max}).")
         if m_min in [0, 1]:
             raise ValueError(f"There is no point in clustering into `{m_min}` clusters.")
-        
+
+        if not isinstance(m_min, int):
+            raise TypeError(f"m_min is not an integer.")
+        if not isinstance(m_max, int):
+            raise TypeError(f"m_max is not an integer.")
+
         # Calculate Schur matrix R and Schur vector matrix X, if not adequately given.
         self._do_schur_helper(m_max)
     

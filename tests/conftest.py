@@ -3,6 +3,8 @@ import pytest
 
 import numpy as np
 
+from tests.get_input import get_known_input
+
 
 @pytest.fixture(scope="session", autouse=True)
 def session_setup():
@@ -73,6 +75,7 @@ def count_A():
     )
 
 
+@pytest.fixture(scope="session")
 def count_chi():
     return np.array(
         [
@@ -300,7 +303,7 @@ def count_sd_weights():
 
 
 @pytest.fixture(scope="session")
-def count_PC():
+def count_Pc():
     return np.array(
         [
             [9.5104510750059479e-01, 1.8354056625839690e-02, 3.0600835873566056e-02],
@@ -388,7 +391,7 @@ def opt_vec_nm():
 
 @pytest.fixture(params=[0, 10, 50, 100, 200, 500, 1000])
 def example_matrix_mu(request):
-    mu = request.params
+    mu = request.param
 
     return np.array(
         [
@@ -407,7 +410,7 @@ def example_matrix_mu(request):
 
 
 @pytest.fixture(scope="session")
-def mu0_init():
+def A_mu0_init():
     return np.array(
         [
             [
@@ -427,8 +430,8 @@ def mu0_init():
 
 
 @pytest.fixture(scope="session")
-def mu0():
-    return np.ndarray(
+def A_mu0():
+    return np.array(
         [
             [
                 3.3390904470272720e-01,
@@ -447,7 +450,7 @@ def mu0():
 
 
 @pytest.fixture(scope="session")
-def svec_m0():
+def svecs_mu0():
     return np.array(
         [
             [
@@ -497,8 +500,8 @@ def svec_m0():
 
 
 @pytest.fixture(scope="session")
-def mu1000_init():
-    return np.ndarray(
+def A_mu1000_init():
+    return np.array(
         [
             [
                 9.1894070188323573e-02,
@@ -541,7 +544,7 @@ def mu1000_init():
 
 
 @pytest.fixture(scope="session")
-def mu1000():
+def A_mu1000():
     return np.array(
         [
             [
@@ -656,7 +659,8 @@ def svecs_mu1000():
     )
 
 
-def chi_isa_mu_n3():
+@pytest.fixture(scope="session")
+def chi_isa_mu0_n3():
     return np.array(
         [
             [
@@ -705,6 +709,7 @@ def chi_isa_mu_n3():
     )
 
 
+@pytest.fixture(scope="session")
 def chi_isa_mu100_n3():
     return np.array(
         [
@@ -2609,3 +2614,15 @@ def count():
         ],
         dtype=np.float64,
     )
+
+
+@pytest.fixture(scope="session")
+def P(count):
+    P, _ = get_known_input(count)
+    return P
+
+
+@pytest.fixture(scope="session")
+def sd(count):
+    _, sd = get_known_input(count)
+    return sd

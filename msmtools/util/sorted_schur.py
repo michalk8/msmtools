@@ -288,6 +288,8 @@ def sorted_schur(P, m, z='LM', method='brandts', tol_krylov=1e-16):
         k = m + 1
     elif m == n:
         k = m
+    else:
+        raise ValueError(f"Requested more groups ({m}) than states ({n}).")
 
     # compute the sorted schur decomposition
     if method == 'brandts':
