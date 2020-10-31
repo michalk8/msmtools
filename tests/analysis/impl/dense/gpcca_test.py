@@ -74,11 +74,15 @@ class TestGPCCAMatlabRegression:
         Pc = g.coarse_grained_transition_matrix
         assert_allclose(Pc, count_Pc, atol=eps)
 
-        A = g.rotation_matrix
-        assert_allclose(A, count_A, atol=eps)
+        # TODO: this fails
+        # E       Max absolute difference: 3.17714693e-05
+        # E       Max relative difference: 0.000226
+        assert_allclose(g.rotation_matrix, count_A, atol=eps)
 
-        chi = g.memberships
-        assert_allclose(chi, count_chi, atol=eps)
+        # TODO: this fails
+        # E       Max absolute difference: 4.76241598e-05
+        # E       Max relative difference: 1.56107011e+13
+        assert_allclose(g.memberships, count_chi, atol=eps)
 
 
 class TestGPCCAMatlabUnit:
