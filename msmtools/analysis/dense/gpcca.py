@@ -762,14 +762,14 @@ def gpcca_coarsegrain(P, m, eta=None, z='LM', method='brandts'):
     ----------
     P : ndarray (n,n)
         Transition matrix (row-stochastic).
-        
-    eta : ndarray (n,) 
+
+    m : int, tuple[int, int]
+        Number of clusters to group into.
+
+    eta : ndarray (n,)
         Input (initial) distribution of states.
         In case of a reversible transition matrix, use the stationary distribution ``pi`` here.
 
-    m : int
-        Number of clusters to group into.
-        
     z : string, (default='LM')
         Specifies which portion of the eigenvalue spectrum of `P` 
         is to be sought. The invariant subspace of `P` that is  
@@ -826,7 +826,7 @@ def gpcca_coarsegrain(P, m, eta=None, z='LM', method='brandts'):
 
     chi = GPCCA(P, eta, z, method).optimize(m).memberships
 
-    return coarsegrain(P, chi, eta)
+    return coarsegrain(P, eta=eta, chi=chi)
 
 
 class GPCCA(object):
@@ -875,11 +875,11 @@ class GPCCA(object):
          Use with CAUTION! 
          ----------------------------------------------------
          To use this method you need to have petsc, petsc4py, 
-         selpc, and slepc4py installed. For optimal performance 
+         slepc, and slepc4py installed. For optimal performance
          it is highly recommended that you also have mpi (at least 
          version 2) and mpi4py installed. The installation can be 
          a little tricky sometimes, but the following approach was 
-         successfull on Ubuntu 18.04:
+         successful on Ubuntu 18.04:
          ``sudo apt-get update & sudo apt-get upgrade``
          ``sudo apt-get install libopenmpi-dev``
          ``pip install --user mpi4py``

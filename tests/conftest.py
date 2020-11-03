@@ -12,6 +12,20 @@ def session_setup():
     warnings.filterwarnings("once", category=PendingDeprecationWarning)
 
 
+def _skip_if_no_petsc_slepc() -> bool:
+    try:
+        import petsc4py
+        import slepc4py
+        return False
+    except ImportError:
+        return True
+
+    
+skip_if_no_petsc_slepc = pytest.mark.skipif(
+    _skip_if_no_petsc_slepc(), reason="No PETSc or SLEPc is installed."
+)
+
+
 @pytest.fixture(scope="session")
 def count_sd():
     return np.array(

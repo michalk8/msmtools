@@ -2,10 +2,14 @@ import pytest
 import numpy as np
 
 from scipy.linalg import hilbert, pinv
+from scipy.sparse import csr_matrix, issparse
+
 from tests.get_input import get_known_input, mu
 from tests.numeric import assert_allclose
+from tests.conftest import skip_if_no_petsc_slepc
 from msmtools.analysis.dense.gpcca import (
     GPCCA,
+    gpcca_coarsegrain,
     _do_schur,
     _fill_matrix,
     _gram_schmidt_mod,
@@ -17,6 +21,15 @@ from msmtools.analysis.dense.gpcca import (
 )
 
 eps = np.finfo(np.float64).eps * 1e10
+
+
+def _assert_schur(P: np.ndarray, X: np.ndarray, RR: np.ndarray, N: int):
+    np.testing.assert_array_equal(P.shape, [N, N])
+    np.testing.assert_array_equal(X.shape, [N, N])
+    np.testing.assert_array_equal(RR.shape, [N, N])
+
+    assert np.all(np.abs(X @ RR - P @ X) < eps)
+    assert np.all(np.abs(X[:, 0] - 1) < eps)
 
 
 class TestGPCCAMatlabRegression:
@@ -56,7 +69,6 @@ class TestGPCCAMatlabRegression:
         with pytest.raises(ValueError):
             g.minChi(m_min=5, m_max=3)
 
-    @pytest.mark.xfail
     def test_normal_case(
         self,
         P: np.ndarray,
@@ -74,6 +86,9 @@ class TestGPCCAMatlabRegression:
         Pc = g.coarse_grained_transition_matrix
         assert_allclose(Pc, count_Pc, atol=eps)
 
+        assert_allclose(Pc.sum(1), 1.0)
+        assert_allclose(g.coarse_grained_transition_matrix.sum(1), 1.0)
+
         # TODO: this fails
         # E       Max absolute difference: 3.17714693e-05
         # E       Max relative difference: 0.000226
@@ -89,14 +104,9 @@ class TestGPCCAMatlabUnit:
     def test_do_schur(self, example_matrix_mu: np.ndarray):
         N = 9
         P, sd = get_known_input(example_matrix_mu)
-        X, RR, _ = _do_schur(P, eta=sd, m=9)
+        X, RR, _ = _do_schur(P, eta=sd, m=N)
 
-        np.testing.assert_array_equal(P.shape, [N, N])
-        np.testing.assert_array_equal(X.shape, [N, N])
-        np.testing.assert_array_equal(RR.shape, [N, N])
-
-        assert np.all(np.abs(X @ RR - P @ X) < eps)
-        assert np.all(np.abs(X[:, 0] - 1) < eps)
+        _assert_schur(P, X, RR, N)
 
     def test_schur_b_pos(self):
         N = 9
@@ -451,7 +461,7 @@ class TestGPCCAMatlabUnit:
 
             assert_allclose(chi.T @ chi, chi_exp.T @ chi_exp)
             # TODO: this fails
-            # assert_allclose(chi, chi_exp)
+            assert_allclose(chi, chi_exp)
 
     def test_use_minChi(self):
         kmin, kmax = 2, 9
@@ -466,3 +476,104 @@ class TestGPCCAMatlabUnit:
             kopt[i] = kmax - 1 - np.argmax(np.flipud(minChi[1:-1]))
 
         np.testing.assert_array_equal(kopt, [3] * 6 + [7])
+
+    def test_gpcca_brandts_sparse_is_densified(self, P: np.ndarray, sd: np.ndarray):
+
+        with pytest.warns(
+            UserWarning,
+            match=r"Sparse implementation is only avaiable for `method='krylov'`, densifying.",
+        ):
+            GPCCA(csr_matrix(P), eta=sd, method="brandts").optimize(3)
+
+
+@skip_if_no_petsc_slepc
+class TestPETScSLEPc:
+    def test_do_schur_krylov(self, example_matrix_mu: np.ndarray):
+        N = 9
+        P, sd = get_known_input(example_matrix_mu)
+
+        X_k, RR_k, _ = _do_schur(P, eta=sd, m=N, method="krylov")
+
+        _assert_schur(P, X_k, RR_k, N)
+
+    def test_do_schur_krylov_eq_brandts(self, example_matrix_mu: np.ndarray):
+        N = 9
+        P, sd = get_known_input(example_matrix_mu)
+
+        X_b, RR_b, _ = _do_schur(P, eta=sd, m=N, method="brandts")
+        X_k, RR_k, _ = _do_schur(P, eta=sd, m=N, method="krylov")
+
+        assert_allclose(X_k, X_b)
+        assert_allclose(RR_k, RR_b)
+
+    def test_do_schur_sparse(self, example_matrix_mu: np.ndarray):
+        N = 9
+        P, sd = get_known_input(example_matrix_mu)
+
+        X_k, RR_k, _ = _do_schur(csr_matrix(P), eta=sd, m=N, method="krylov")
+
+        _assert_schur(P, X_k, RR_k, N)
+
+    def test_normal_case_sparse(
+        self,
+        P: np.ndarray,
+        sd: np.ndarray,
+        count_sd: np.ndarray,
+        count_Pc: np.ndarray,
+        count_A: np.ndarray,
+        count_chi: np.ndarray,
+    ):
+        assert_allclose(sd, count_sd)
+
+        g = GPCCA(csr_matrix(P), eta=sd, method="krylov")
+        g.optimize((2, 10))
+
+        Pc = g.coarse_grained_transition_matrix
+        assert_allclose(Pc, count_Pc, atol=eps)
+
+        assert_allclose(Pc.sum(1), 1.0)
+        assert_allclose(g.coarse_grained_transition_matrix.sum(1), 1.0)
+
+        # TODO: this fails
+        # E       Max absolute difference: 3.17714693e-05
+        # E       Max relative difference: 0.000226
+        assert_allclose(g.rotation_matrix, count_A, atol=eps)
+
+        # TODO: this fails
+        # E       Max absolute difference: 4.76241598e-05
+        # E       Max relative difference: 1.56107011e+13
+        assert_allclose(g.memberships, count_chi, atol=eps)
+
+    def test_coarse_grain_sparse(
+        self, P: np.ndarray, sd: np.ndarray, count_Pc: np.ndarray
+    ):
+        Pc = gpcca_coarsegrain(csr_matrix(P), m=(2, 10), eta=sd, method="krylov")
+
+        assert_allclose(Pc.sum(1), 1.0)
+        assert_allclose(Pc, count_Pc, atol=eps)
+
+    def test_coarse_grain_sparse_eq_dense(self, example_matrix_mu: np.ndarray):
+        N = 9
+        P, sd = get_known_input(example_matrix_mu)
+
+        Pc_b = gpcca_coarsegrain(P, m=N, eta=sd, method="brandts")
+        Pc_k = gpcca_coarsegrain(csr_matrix(P), m=N, eta=sd, method="krylov")
+
+        assert_allclose(Pc_k, Pc_b)
+
+    def test_gpcca_krylov_sparse_eq_dense(self, example_matrix_mu: np.ndarray):
+        # fails for example_matrix_mu[0]
+        N = 9
+        P, sd = get_known_input(example_matrix_mu)
+
+        g_s = GPCCA(csr_matrix(P), eta=sd, method="krylov").optimize(N)
+        g_d = GPCCA(P, eta=sd, method="krylov").optimize(N)
+
+        assert issparse(g_s.P)
+        assert not issparse(g_d.P)
+
+        assert_allclose(
+            g_s.coarse_grained_transition_matrix, g_d.coarse_grained_transition_matrix
+        )
+        assert_allclose(g_s.rotation_matrix, g_d.rotation_matrix)
+        assert_allclose(g_s.memberships, g_d.memberships)
