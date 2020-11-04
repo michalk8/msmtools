@@ -460,7 +460,8 @@ class TestGPCCAMatlabUnit:
             chi, _ = _cluster_by_isa(X[:, :3])
 
             assert_allclose(chi.T @ chi, chi_exp.T @ chi_exp)
-            # TODO: this fails
+            # TODO: it's permutation error (2nd and 3rd col)
+            # TODO: just swap 2-3 in Matlab GT
             assert_allclose(chi, chi_exp)
 
     def test_use_minChi(self):
@@ -497,11 +498,10 @@ class TestPETScSLEPc:
         _assert_schur(P, X_k, RR_k, N)
 
     def test_do_schur_krylov_eq_brandts(self, example_matrix_mu: np.ndarray):
-        N = 9
         P, sd = get_known_input(example_matrix_mu)
 
-        X_b, RR_b, _ = _do_schur(P, eta=sd, m=N, method="brandts")
-        X_k, RR_k, _ = _do_schur(P, eta=sd, m=N, method="krylov")
+        X_b, RR_b, _ = _do_schur(P, eta=sd, m=3, method="brandts")
+        X_k, RR_k, _ = _do_schur(P, eta=sd, m=3, method="krylov")
 
         assert_allclose(X_k, X_b)
         assert_allclose(RR_k, RR_b)
@@ -556,24 +556,29 @@ class TestPETScSLEPc:
         N = 9
         P, sd = get_known_input(example_matrix_mu)
 
-        Pc_b = gpcca_coarsegrain(P, m=N, eta=sd, method="brandts")
-        Pc_k = gpcca_coarsegrain(csr_matrix(P), m=N, eta=sd, method="krylov")
+        Pc_b = gpcca_coarsegrain(P, m=3, eta=sd, method="brandts")
+        Pc_k = gpcca_coarsegrain(csr_matrix(P), m=3, eta=sd, method="krylov")
 
         assert_allclose(Pc_k, Pc_b)
 
     def test_gpcca_krylov_sparse_eq_dense(self, example_matrix_mu: np.ndarray):
         # fails for example_matrix_mu[0]
-        N = 9
         P, sd = get_known_input(example_matrix_mu)
 
-        g_s = GPCCA(csr_matrix(P), eta=sd, method="krylov").optimize(N)
-        g_d = GPCCA(P, eta=sd, method="krylov").optimize(N)
+        # for 3 it's fine
+        g_s = GPCCA(csr_matrix(P), eta=sd, method="krylov").optimize(4)
+        g_d = GPCCA(P, eta=sd, method="krylov").optimize(4)
 
         assert issparse(g_s.P)
         assert not issparse(g_d.P)
 
+        assert_allclose(g_s.memberships.sum(1), 1.0)
+        assert_allclose(g_d.memberships.sum(1), 1.0)
+
+        assert_allclose(g_s.memberships, g_d.memberships)
+        assert_allclose(g_s.rotation_matrix, g_d.rotation_matrix)
         assert_allclose(
             g_s.coarse_grained_transition_matrix, g_d.coarse_grained_transition_matrix
         )
-        assert_allclose(g_s.rotation_matrix, g_d.rotation_matrix)
-        assert_allclose(g_s.memberships, g_d.memberships)
+
+    # TODO: include Marius' example

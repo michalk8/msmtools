@@ -190,9 +190,10 @@ def _do_schur(P, eta, m, z='LM', method='brandts', tol_krylov=1e-16):
         
     R : ndarray (m,m)
         The ordered top left Schur form.
-        Only returned, if the chosen method is 
-        not the Krylov-Schur method.
-    
+
+    TODO
+    eigenvalues
+
     """
     from scipy.linalg import subspace_angles
     from msmtools.util.sorted_schur import sorted_schur

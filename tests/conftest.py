@@ -328,6 +328,7 @@ def count_Pc():
 def example_matrix_mu(request):
     mu = request.param
 
+    # TODO: check if mu=0 is irreducible
     return np.array(
         [
             [1000, 100, 100, 10, 0, 0, 0, 0, 0],
