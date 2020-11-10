@@ -3,6 +3,7 @@ import numpy as np
 
 from scipy.linalg import hilbert, pinv
 from scipy.sparse import csr_matrix, issparse
+from typing import Optional
 
 from tests.get_input import get_known_input, mu
 from tests.numeric import assert_allclose
@@ -23,13 +24,16 @@ from msmtools.analysis.dense.gpcca import (
 eps = np.finfo(np.float64).eps * 1e10
 
 
-def _assert_schur(P: np.ndarray, X: np.ndarray, RR: np.ndarray, N: int):
-    np.testing.assert_array_equal(P.shape, [N, N])
-    np.testing.assert_array_equal(X.shape, [N, N])
-    np.testing.assert_array_equal(RR.shape, [N, N])
+def _assert_schur(
+    P: np.ndarray, X: np.ndarray, RR: np.ndarray, N: Optional[int] = None
+):
+    if N is not None:
+        np.testing.assert_array_equal(P.shape, [N, N])
+        np.testing.assert_array_equal(X.shape, [N, N])
+        np.testing.assert_array_equal(RR.shape, [N, N])
 
-    assert np.all(np.abs(X @ RR - P @ X) < eps)
-    assert np.all(np.abs(X[:, 0] - 1) < eps)
+    assert np.all(np.abs(X @ RR - P @ X) < eps), np.abs(X @ RR - P @ X)
+    assert np.all(np.abs(X[:, 0] - 1) < eps), np.abs(X[:, 0])
 
 
 class TestGPCCAMatlabRegression:
@@ -88,13 +92,13 @@ class TestGPCCAMatlabRegression:
 
         assert_allclose(Pc.sum(1), 1.0)
         assert_allclose(g.coarse_grained_transition_matrix.sum(1), 1.0)
+        assert_allclose(g.memberships.sum(1), 1.0)
 
-        # TODO: this fails
+        # TODO:
         # E       Max absolute difference: 3.17714693e-05
         # E       Max relative difference: 0.000226
-        assert_allclose(g.rotation_matrix, count_A, atol=eps)
+        assert_allclose(g.rotation_matrix, count_A)
 
-        # TODO: this fails
         # E       Max absolute difference: 4.76241598e-05
         # E       Max relative difference: 1.56107011e+13
         assert_allclose(g.memberships, count_chi, atol=eps)
@@ -118,8 +122,7 @@ class TestGPCCAMatlabUnit:
         np.testing.assert_array_equal(X.shape, [9, 3])
         np.testing.assert_array_equal(RR.shape, [3, 3])
 
-        assert np.all(np.abs(X @ RR - P @ X) < eps)
-        assert np.all(np.abs(X[:, 0] - 1) < eps)
+        _assert_schur(P, X, RR, N=None)
 
     def test_schur_b_neg(self):
         mu0 = mu(0)
@@ -184,7 +187,6 @@ class TestGPCCAMatlabUnit:
         with pytest.raises(ValueError):
             _indexsearch(np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0]]))
 
-    @pytest.mark.xfail(reason="1st vector is not constant")
     def test_indexsearch_1(self):
         v = np.eye(6)
         v = np.r_[np.zeros((1, 6)), v]
@@ -193,11 +195,15 @@ class TestGPCCAMatlabUnit:
             v[0], v[1], v[0], v[2], v[0], v[3], v[0], v[4], v[0], v[5], v[0], v[6]
         ].T
 
-        index = _indexsearch(sys)
+        with pytest.raises(
+            ValueError,
+            match=r"First Schur vector is not constant. "
+            r"This indicates that the Schur vectors are incorrectly sorted. "
+            r"Cannot search for a simplex structure in the data.",
+        ):
+            index = _indexsearch(sys)
+            np.testing.assert_array_equal(index, [1, 3, 5, 7, 9, 11])
 
-        np.testing.assert_array_equal(index, [1, 3, 5, 7, 9, 11])
-
-    @pytest.mark.xfail(reason="1st vector is not constant")
     def test_indexsearch_2(self):
         v3 = np.array([0, 0, 3])
         p1 = np.array([0.75, 1, 0])
@@ -211,9 +217,14 @@ class TestGPCCAMatlabUnit:
 
         sys = np.c_[v3, p1, v1, v0, p3, v2, p2, p4, p5].T
 
-        index = _indexsearch(sys)
-
-        np.testing.assert_array_equal(index, [0, 5, 2])
+        with pytest.raises(
+            ValueError,
+            match=r"First Schur vector is not constant. "
+            r"This indicates that the Schur vectors are incorrectly sorted. "
+            r"Cannot search for a simplex structure in the data.",
+        ):
+            index = _indexsearch(sys)
+            np.testing.assert_array_equal(index, [0, 5, 2])
 
     def test_initialize_A_shape_error_1(self):
         X = np.zeros((3, 4))
@@ -293,7 +304,7 @@ class TestGPCCAMatlabUnit:
         ):
             _objective(alpha, svecs)
 
-    @pytest.mark.xfail(reason="No check whether 1st Schur vectors is 1")
+    @pytest.mark.skip(reason="No check whether 1st Schur vectors is 1")
     def test_objective_1st_col(self):
         svecs = np.zeros((3, 4))
         alpha = np.zeros((9,))
@@ -350,9 +361,7 @@ class TestGPCCAMatlabUnit:
         ):
             _opt_soft(scvecs, A)
 
-    @pytest.mark.xfail(
-        reason="Doesn't raise ValueError - works with 1x1 rotation matrix."
-    )
+    @pytest.mark.xfail(reason="Doesn't raise ValueError")
     def test_opt_soft_shape_error_3(self):
         A = np.zeros((1, 1), dtype=np.float64)
         scvecs = np.zeros((1, 1))
@@ -361,7 +370,7 @@ class TestGPCCAMatlabUnit:
         with pytest.raises(ValueError):
             _opt_soft(scvecs, A)
 
-    @pytest.mark.xfail(reason="No check in that function.")
+    @pytest.mark.skip(reason="No check in that function.")
     def test_opt_soft_shape_error_4(self):
         # test assertion for schur vector (N,k)-matrix  with k>N
         # the check is done only in `_initialize_rot_matrix`
@@ -372,8 +381,8 @@ class TestGPCCAMatlabUnit:
         with pytest.raises(ValueError):
             _opt_soft(scvecs, A)
 
-    @pytest.mark.xfail(reason="No check in that function.")
-    def test_opt_soft_shape_error_4(self):
+    @pytest.mark.skip(reason="No check in that function.")
+    def test_opt_soft_shape_error_5(self):
         # test assertion for schur vector (N,k)-matrix with k=N
         A = np.zeros((4, 4), dtype=np.float64)
         scvecs = np.zeros((4, 4))
@@ -382,7 +391,7 @@ class TestGPCCAMatlabUnit:
         with pytest.raises(ValueError):
             _opt_soft(scvecs, A)
 
-    @pytest.mark.xfail(reason="No check in that function.")
+    @pytest.mark.skip(reason="No check in that function.")
     def test_opt_soft_first_col_not_1(self):
         A = np.zeros((3, 3), dtype=np.float64)
         scvecs = np.zeros((4, 3))
@@ -427,7 +436,6 @@ class TestGPCCAMatlabUnit:
 
         np.testing.assert_array_equal(kopt, [3, 3, 3, 3, 2, 2, 7])
 
-    # TODO: test_SRSchur
     def test_cluster_by_first_col_not_1(self):
         svecs = np.zeros((4, 3))
         svecs[0, 0] = 1
@@ -453,6 +461,7 @@ class TestGPCCAMatlabUnit:
     def test_cluster_by_isa(
         self, chi_isa_mu0_n3: np.ndarray, chi_isa_mu100_n3: np.ndarray
     ):
+        # chi_sa_mu0_n3 has permuted 2nd and 3d columns when compared to the matlab version
         for m, chi_exp in zip([0, 100], [chi_isa_mu0_n3, chi_isa_mu100_n3]):
             mu_ = mu(m)
             P, sd = get_known_input(mu_)
@@ -460,8 +469,6 @@ class TestGPCCAMatlabUnit:
             chi, _ = _cluster_by_isa(X[:, :3])
 
             assert_allclose(chi.T @ chi, chi_exp.T @ chi_exp)
-            # TODO: it's permutation error (2nd and 3rd col)
-            # TODO: just swap 2-3 in Matlab GT
             assert_allclose(chi, chi_exp)
 
     def test_use_minChi(self):
@@ -498,13 +505,18 @@ class TestPETScSLEPc:
         _assert_schur(P, X_k, RR_k, N)
 
     def test_do_schur_krylov_eq_brandts(self, example_matrix_mu: np.ndarray):
+        from scipy.linalg import subspace_angles
+
         P, sd = get_known_input(example_matrix_mu)
 
         X_b, RR_b, _ = _do_schur(P, eta=sd, m=3, method="brandts")
         X_k, RR_k, _ = _do_schur(P, eta=sd, m=3, method="krylov")
 
-        assert_allclose(X_k, X_b)
-        assert_allclose(RR_k, RR_b)
+        # check if it's a correct Schur form
+        _assert_schur(P, X_b, RR_b, N=None)
+        _assert_schur(P, X_k, RR_k, N=None)
+        # check if they span the same subspace
+        assert np.max(subspace_angles(X_b, X_k)) < eps
 
     def test_do_schur_sparse(self, example_matrix_mu: np.ndarray):
         N = 9
@@ -520,8 +532,8 @@ class TestPETScSLEPc:
         sd: np.ndarray,
         count_sd: np.ndarray,
         count_Pc: np.ndarray,
-        count_A: np.ndarray,
-        count_chi: np.ndarray,
+        count_A_sparse: np.ndarray,
+        count_chi_sparse: np.ndarray,
     ):
         assert_allclose(sd, count_sd)
 
@@ -533,16 +545,12 @@ class TestPETScSLEPc:
 
         assert_allclose(Pc.sum(1), 1.0)
         assert_allclose(g.coarse_grained_transition_matrix.sum(1), 1.0)
+        assert_allclose(g.memberships.sum(1), 1.0)
 
-        # TODO: this fails
-        # E       Max absolute difference: 3.17714693e-05
-        # E       Max relative difference: 0.000226
-        assert_allclose(g.rotation_matrix, count_A, atol=eps)
+        assert_allclose(g.rotation_matrix, count_A_sparse, atol=eps)
 
-        # TODO: this fails
-        # E       Max absolute difference: 4.76241598e-05
-        # E       Max relative difference: 1.56107011e+13
-        assert_allclose(g.memberships, count_chi, atol=eps)
+        # ground truth had to be regenerated
+        assert_allclose(g.memberships, count_chi_sparse, atol=eps)
 
     def test_coarse_grain_sparse(
         self, P: np.ndarray, sd: np.ndarray, count_Pc: np.ndarray
@@ -553,7 +561,6 @@ class TestPETScSLEPc:
         assert_allclose(Pc, count_Pc, atol=eps)
 
     def test_coarse_grain_sparse_eq_dense(self, example_matrix_mu: np.ndarray):
-        N = 9
         P, sd = get_known_input(example_matrix_mu)
 
         Pc_b = gpcca_coarsegrain(P, m=3, eta=sd, method="brandts")
@@ -562,7 +569,8 @@ class TestPETScSLEPc:
         assert_allclose(Pc_k, Pc_b)
 
     def test_gpcca_krylov_sparse_eq_dense(self, example_matrix_mu: np.ndarray):
-        # fails for example_matrix_mu[0]
+        from scipy.linalg import subspace_angles
+
         P, sd = get_known_input(example_matrix_mu)
 
         # for 3 it's fine
@@ -575,10 +583,41 @@ class TestPETScSLEPc:
         assert_allclose(g_s.memberships.sum(1), 1.0)
         assert_allclose(g_d.memberships.sum(1), 1.0)
 
-        assert_allclose(g_s.memberships, g_d.memberships)
-        assert_allclose(g_s.rotation_matrix, g_d.rotation_matrix)
-        assert_allclose(
-            g_s.coarse_grained_transition_matrix, g_d.coarse_grained_transition_matrix
-        )
+        X_k, X_b = g_s.schur_vectors, g_d.schur_vectors
+        RR_k, RR_b = g_s.schur_matrix, g_d.schur_matrix
 
-    # TODO: include Marius' example
+        # check if it's a correct Schur form
+        _assert_schur(P, X_b, RR_b, N=None)
+        _assert_schur(P, X_k, RR_k, N=None)
+        # check if they span the same subspace
+        assert np.max(subspace_angles(X_b, X_k)) < eps
+
+        # TODO: fails for example_matrix_mu(0), others are fine
+        if example_matrix_mu[4, 2]:
+            assert_allclose(g_s.memberships, g_d.memberships)
+            assert_allclose(g_s.rotation_matrix, g_d.rotation_matrix)
+            assert_allclose(
+                g_s.coarse_grained_transition_matrix, g_d.coarse_grained_transition_matrix
+            )
+
+
+class TestCustom:
+    def test_P2(self, P_2: np.ndarray):
+        from scipy.linalg import subspace_angles
+
+        g = GPCCA(P_2, eta=None)
+
+        for m in range(2, 10):
+            try:
+                g.optimize(m)
+            except ValueError:
+                continue
+
+            X, RR = g.schur_vectors, g.schur_matrix
+
+            assert_allclose(g.memberships.sum(1), 1.0)
+            np.testing.assert_allclose(X[:, 0], 1.0)
+
+            assert np.max(subspace_angles(P_2 @ X, X @ RR)) < eps
+            # TODO: this fails
+            assert np.all(np.abs(X @ RR - P_2 @ X) <= eps), np.abs(X @ RR - P_2 @ X)

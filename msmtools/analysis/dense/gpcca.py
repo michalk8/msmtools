@@ -191,9 +191,8 @@ def _do_schur(P, eta, m, z='LM', method='brandts', tol_krylov=1e-16):
     R : ndarray (m,m)
         The ordered top left Schur form.
 
-    TODO
-    eigenvalues
-
+    e: : ndarrray TODO
+        Eigenvalues.
     """
     from scipy.linalg import subspace_angles
     from msmtools.util.sorted_schur import sorted_schur
