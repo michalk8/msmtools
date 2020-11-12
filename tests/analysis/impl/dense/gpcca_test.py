@@ -629,6 +629,10 @@ class TestCustom:
             X, RR = g.schur_vectors, g.schur_matrix
 
             assert_allclose(g.memberships.sum(1), 1.0)
+            assert_allclose(g.coarse_grained_transition_matrix.sum(1), 1.0)
+            assert_allclose(g.coarse_grained_input_distribution.sum(), 1.0)
+            if g.coarse_grained_stationary_probability is not None:
+                assert_allclose(g.coarse_grained_stationary_probability.sum(), 1.0)
             np.testing.assert_allclose(X[:, 0], 1.0)
 
             assert np.max(subspace_angles(P_i @ X, X @ RR)) < eps
