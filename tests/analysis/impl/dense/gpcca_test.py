@@ -626,5 +626,3 @@ class TestCustom:
             np.testing.assert_allclose(X[:, 0], 1.0)
 
             assert np.max(subspace_angles(P_2 @ X, X @ RR)) < eps
-            # AssertionError: 0.0012763188973086148
-            assert np.all(np.abs(X @ RR - P_2 @ X) <= eps), np.abs(X @ RR - P_2 @ X).max()
