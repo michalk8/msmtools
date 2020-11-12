@@ -32,8 +32,8 @@ def _assert_schur(
         np.testing.assert_array_equal(X.shape, [N, N])
         np.testing.assert_array_equal(RR.shape, [N, N])
 
-    assert np.all(np.abs(X @ RR - P @ X) < eps), np.abs(X @ RR - P @ X)
-    assert np.all(np.abs(X[:, 0] - 1) < eps), np.abs(X[:, 0])
+    assert np.all(np.abs(X @ RR - P @ X) < eps), np.abs(X @ RR - P @ X).max()
+    assert np.all(np.abs(X[:, 0] - 1) < eps), np.abs(X[:, 0]).max()
 
 
 class TestGPCCAMatlabRegression:
@@ -609,10 +609,16 @@ class TestPETScSLEPc:
 
 
 class TestCustom:
-    def test_P2(self, P_2: np.ndarray):
+    @pytest.mark.parametrize("method", ["krylov", "brandts"])
+    def test_P_i(self, P_i: np.ndarray, method: str):
         from scipy.linalg import subspace_angles
 
-        g = GPCCA(P_2, eta=None, method="brants")
+        if method == "krylov":
+            pytest.importorskip("mpi4py")
+            pytest.importorskip("petsc4py")
+            pytest.importorskip("slepc4py")
+
+        g = GPCCA(P_i, eta=None, method=method)
 
         for m in range(2, 8):
             try:
@@ -625,4 +631,4 @@ class TestCustom:
             assert_allclose(g.memberships.sum(1), 1.0)
             np.testing.assert_allclose(X[:, 0], 1.0)
 
-            assert np.max(subspace_angles(P_2 @ X, X @ RR)) < eps
+            assert np.max(subspace_angles(P_i @ X, X @ RR)) < eps
