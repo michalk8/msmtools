@@ -266,12 +266,10 @@ def _do_schur(P, eta, m, z='LM', method='brandts', tol_krylov=1e-16):
     if not test:
         raise ValueError(f"According to scipy.linalg.subspace_angles() X isn't an invariant "
                          f"subspace of P, since the subspace angles between the column spaces "
-                         f"of P*X and X*R (resp. X, if you chose the Krylov-Schur method) "
-                         f"aren't near zero. The subspace angles are: `{dummy}`")
+                         f"of P*X and X*R aren't near zero. The subspace angles are: `{dummy}`")
     elif not test1:
         warnings.warn("According to scipy.linalg.subspace_angles() the dimension of the "
-                      "column spaces of P*X and/or X*R (resp. X, if you chose the "
-                      "Krylov-Schur method) is not equal to m.")
+                      "column spaces of P*X and/or X*R is not equal to m.")
 
     # Raise, if the first column X[:,0] of the Schur vector matrix isn't constantly equal 1!
     if not np.allclose(X[:, 0], 1.0, atol=1e-8, rtol=1e-5):
