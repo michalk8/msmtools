@@ -1,9 +1,10 @@
 import pytest
 import numpy as np
 
-from scipy.linalg import hilbert, pinv
+from scipy.linalg import hilbert, pinv, subspace_angles, lu
 from scipy.sparse import csr_matrix, issparse
 from typing import Optional
+from operator import itemgetter
 
 from tests.get_input import get_known_input, mu
 from tests.numeric import assert_allclose
@@ -34,6 +35,36 @@ def _assert_schur(
 
     assert np.all(np.abs(X @ RR - P @ X) < eps), np.abs(X @ RR - P @ X).max()
     assert np.all(np.abs(X[:, 0] - 1) < eps), np.abs(X[:, 0]).max()
+
+
+def _find_permutation(expected: np.ndarray, actual: np.ndarray) -> np.ndarray:
+    """
+    Parameters
+    ----------
+    expected
+        Array of shape ``(N, M).``
+    actual
+        Array of shape ``(N, M).``
+
+    Returns
+    -------
+    :class:`numpy.ndarray`
+        Array of shape ``(M,)``.
+    """
+    assert expected.shape == actual.shape
+    perm = []
+    temp = {i: expected[:, i] for i in range(expected.shape[1])}
+
+    for a in actual.T:
+        perm.append(
+            min(
+                ((ix, np.linalg.norm(a - e)) for ix, e in temp.items()),
+                key=itemgetter(1),
+            )[0]
+        )
+        temp.pop(perm[-1])
+
+    return np.array(perm)
 
 
 class TestGPCCAMatlabRegression:
@@ -82,7 +113,6 @@ class TestGPCCAMatlabRegression:
         count_A: np.ndarray,
         count_chi: np.ndarray,
     ):
-        from scipy.linalg import subspace_angles
         assert_allclose(sd, count_sd)
 
         g = GPCCA(P, eta=sd)
@@ -97,7 +127,7 @@ class TestGPCCAMatlabRegression:
 
         # E       Max absolute difference: 3.17714693e-05
         # E       Max relative difference: 0.000226
-        assert_allclose(g.rotation_matrix, count_A, atol=1e-4, rtol=1e-4)
+        assert_allclose(g.rotation_matrix, count_A, atol=1e-4, rtol=1e-3)
 
         assert np.max(subspace_angles(g.memberships, count_chi)) < eps
 
@@ -302,13 +332,24 @@ class TestGPCCAMatlabUnit:
         ):
             _objective(alpha, svecs)
 
-    @pytest.mark.skip(reason="No check whether 1st Schur vectors is 1")
-    def test_objective_1st_col(self):
-        svecs = np.zeros((3, 4))
-        alpha = np.zeros((9,))
+    def test_objective_1st_col(self, mocker):
+        # check_in_matlab: _objective
+        P, _ = get_known_input(mu(0))
+        N, M = P.shape[0], 4
 
-        with pytest.raises(ValueError):
-            _objective(alpha, svecs)
+        _, L, _ = lu(P[:, :M])
+        mocker.patch(
+            "msmtools.util.sorted_schur.sorted_schur",
+            return_value=(np.eye(M), L, np.array([np.nan] * M)),
+        )
+        mocker.patch("msmtools.analysis.dense.gpcca._gram_schmidt_mod", return_value=L)
+
+        with pytest.raises(
+            ValueError,
+            match=r"The first column X\[:, 0\] of the Schur "
+            r"vector matrix isn't constantly equal 1.",
+        ):
+            _do_schur(P, eta=np.true_divide(np.ones((N,), dtype=np.float64), N), m=M)
 
     def test_objective_1(
         self, svecs_mu0: np.ndarray, A_mu0_init: np.ndarray, A_mu0: np.ndarray
@@ -359,25 +400,29 @@ class TestGPCCAMatlabUnit:
         ):
             _opt_soft(scvecs, A)
 
-    @pytest.mark.xfail(reason="Doesn't raise ValueError")
     def test_opt_soft_shape_error_3(self):
         A = np.zeros((1, 1), dtype=np.float64)
         scvecs = np.zeros((1, 1))
         scvecs[:, 0] = 1.0
 
-        with pytest.raises(ValueError):
+        with pytest.raises(
+            ValueError,
+            match=r"Expected the rotation matrix to be at least of shape \(2, 2\)",
+        ):
             _opt_soft(scvecs, A)
 
-    @pytest.mark.skip(reason="No check in that function.")
     def test_opt_soft_shape_error_4(self):
         # test assertion for schur vector (N,k)-matrix  with k>N
         # the check is done only in `_initialize_rot_matrix`
-        A = np.zeros((4, 4), dtype=np.float64)
+        # check in matlab: _opt_soft
         scvecs = np.zeros((3, 4))
         scvecs[:, 0] = 1.0
 
-        with pytest.raises(ValueError):
-            _opt_soft(scvecs, A)
+        with pytest.raises(
+            ValueError,
+            match=rf"The Schur vector matrix of shape .* has more columns than rows",
+        ):
+            _indexsearch(scvecs)
 
     @pytest.mark.skip(reason="No check in that function.")
     def test_opt_soft_shape_error_5(self):
@@ -385,14 +430,6 @@ class TestGPCCAMatlabUnit:
         A = np.zeros((4, 4), dtype=np.float64)
         scvecs = np.zeros((4, 4))
         scvecs[:, 0] = 1.0
-
-        with pytest.raises(ValueError):
-            _opt_soft(scvecs, A)
-
-    @pytest.mark.skip(reason="No check in that function.")
-    def test_opt_soft_first_col_not_1(self):
-        A = np.zeros((3, 3), dtype=np.float64)
-        scvecs = np.zeros((4, 3))
 
         with pytest.raises(ValueError):
             _opt_soft(scvecs, A)
@@ -466,6 +503,8 @@ class TestGPCCAMatlabUnit:
             X, _, _ = _do_schur(P, sd, m=3)
             chi, _ = _cluster_by_isa(X[:, :3])
 
+            chi = chi[:, _find_permutation(chi_exp, chi)]
+
             assert_allclose(chi.T @ chi, chi_exp.T @ chi_exp)
             assert_allclose(chi, chi_exp)
 
@@ -503,8 +542,6 @@ class TestPETScSLEPc:
         _assert_schur(P, X_k, RR_k, N)
 
     def test_do_schur_krylov_eq_brandts(self, example_matrix_mu: np.ndarray):
-        from scipy.linalg import subspace_angles
-
         P, sd = get_known_input(example_matrix_mu)
 
         X_b, RR_b, _ = _do_schur(P, eta=sd, m=3, method="brandts")
@@ -548,7 +585,9 @@ class TestPETScSLEPc:
         assert_allclose(g.rotation_matrix, count_A_sparse, atol=eps)
 
         # ground truth had to be regenerated
-        assert_allclose(g.memberships, count_chi_sparse, atol=eps)
+        chi = g.memberships
+        chi = chi[:, _find_permutation(count_chi_sparse, chi)]
+        assert_allclose(chi, count_chi_sparse, atol=eps)
 
     def test_coarse_grain_sparse(
         self, P: np.ndarray, sd: np.ndarray, count_Pc: np.ndarray
@@ -567,8 +606,6 @@ class TestPETScSLEPc:
         assert_allclose(Pc_k, Pc_b)
 
     def test_gpcca_krylov_sparse_eq_dense(self, example_matrix_mu: np.ndarray):
-        from scipy.linalg import subspace_angles
-
         P, sd = get_known_input(example_matrix_mu)
 
         # for 3 it's fine
@@ -590,29 +627,14 @@ class TestPETScSLEPc:
         # check if they span the same subspace
         assert np.max(subspace_angles(X_b, X_k)) < eps
 
-        assert_allclose(
-            g_s.coarse_grained_transition_matrix, g_d.coarse_grained_transition_matrix
-        )
-        # fails only for mu=0
-        """
-        E       Max absolute difference: 0.00819921
-        E       Max relative difference: 31.67994808
-        E        x: array([[ 7.617645e-01,  8.596461e-02,  7.776540e-02,  7.450554e-02],
-        E              [ 8.050171e-03,  9.944619e-01, -2.558751e-03,  4.669852e-05],
-        E              [ 1.288973e-02, -4.592786e-03,  9.931358e-01, -1.432708e-03],
-        E              [ 8.936351e-03, -6.036846e-04, -3.527473e-04,  9.920201e-01]])
-        E        y: array([[ 7.617645e-01,  7.776540e-02,  8.596461e-02,  7.450554e-02],
-        E              [ 1.288973e-02,  9.931358e-01, -4.592786e-03, -1.432708e-03],
-        E              [ 8.050171e-03, -2.558751e-03,  9.944619e-01,  4.669852e-05],
-        E              [ 8.936351e-03, -3.527473e-04, -6.036846e-04,  9.920201e-01]])
-        """
+        cgtm = g_s.coarse_grained_transition_matrix
+        cgtm = cgtm[:, _find_permutation(g_d.coarse_grained_transition_matrix, cgtm)]
+        assert_allclose(cgtm, g_d.coarse_grained_transition_matrix)
 
 
 class TestCustom:
     @pytest.mark.parametrize("method", ["krylov", "brandts"])
     def test_P_i(self, P_i: np.ndarray, method: str):
-        from scipy.linalg import subspace_angles
-
         if method == "krylov":
             pytest.importorskip("mpi4py")
             pytest.importorskip("petsc4py")

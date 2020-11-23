@@ -191,7 +191,7 @@ def _do_schur(P, eta, m, z='LM', method='brandts', tol_krylov=1e-16):
     R : ndarray (m,m)
         The ordered top left Schur form.
 
-    e: : ndarrray TODO
+    e: : ndarrray (m,)
         Eigenvalues.
     """
     from scipy.linalg import subspace_angles
@@ -222,7 +222,7 @@ def _do_schur(P, eta, m, z='LM', method='brandts', tol_krylov=1e-16):
 
     # Make a Schur decomposition of P_bar and sort the Schur vectors (and form).
     R, Q, eigenvalues = sorted_schur(P_bar, m, z, method, tol_krylov=tol_krylov) #Pbar!!!
-    
+
     # Orthonormalize the sorted Schur vectors Q via modified Gram-Schmidt-orthonormalization,
     # if the (Schur)vectors aren't orthogonal!
     if not np.allclose(Q.T.dot(Q * eta[:, None]), np.eye(Q.shape[1]), rtol=1e6*eps, atol=1e6*eps):
@@ -252,6 +252,10 @@ def _do_schur(P, eta, m, z='LM', method='brandts', tol_krylov=1e-16):
     if not X.shape[0] == N1:
         raise ValueError(f"The number of rows `n={X.shape[0]}` of the Schur vector matrix X doesn't match "
                          f"those `n={P.shape[0]}` of P.")
+    # Raise, if the first column X[:,0] of the Schur vector matrix isn't constantly equal 1!
+    if not np.allclose(X[:, 0], 1.0, atol=1e-8, rtol=1e-5):
+        raise ValueError("The first column X[:, 0] of the Schur vector matrix isn't constantly equal 1.")
+
     # Raise, if the (Schur)vectors aren't D-orthogonal (don't fullfill the orthogonality condition)!
     if not np.allclose(X.T.dot(X*eta[:, None]), np.eye(X.shape[1]), atol=1e-6, rtol=1e-5):
         print(X.T.dot(X*eta[:, None]))
@@ -271,10 +275,6 @@ def _do_schur(P, eta, m, z='LM', method='brandts', tol_krylov=1e-16):
         warnings.warn("According to scipy.linalg.subspace_angles() the dimension of the "
                       "column spaces of P*X and/or X*R is not equal to m.")
 
-    # Raise, if the first column X[:,0] of the Schur vector matrix isn't constantly equal 1!
-    if not np.allclose(X[:, 0], 1.0, atol=1e-8, rtol=1e-5):
-        raise ValueError("The first column X[:, 0] of the Schur vector matrix isn't constantly equal 1.")
-                  
     return X, R, eigenvalues
 
 
@@ -407,7 +407,7 @@ def _indexsearch(X):
     n, m = X.shape
 
     # Sanity check.
-    if not (n >= m):
+    if n < m:
         raise ValueError("The Schur vector matrix of shape " + str(X.shape) + " has more columns "
                          + "than rows. You can't get a " + str(m) + "-dimensional simplex from " 
                          + str(n) + " data vectors.")
@@ -496,8 +496,10 @@ def _opt_soft(X, rot_matrix):
         raise ValueError("Rotation matrix isn't quadratic.")
     if not (rot_matrix.shape[0] == m):
         raise ValueError("The dimensions of the rotation matrix don't match with the number of Schur vectors.")
-    
-    # Reduce optimization problem to size (m-1)^2 by croping the first row and first column from rot_matrix
+    if rot_matrix.shape[0] < 2:
+        raise ValueError(f"Expected the rotation matrix to be at least of shape (2, 2), found {rot_matrix.shape}.")
+
+    # Reduce optimization problem to size (m-1)^2 by cropping the first row and first column from rot_matrix
     rot_crop_matrix = rot_matrix[1:,1:]
     
     # Now reshape rot_crop_matrix into a linear vector alpha.
