@@ -652,6 +652,31 @@ class TestPETScSLEPc:
         cgtm = cgtm[:, _find_permutation(g_d.coarse_grained_transition_matrix, cgtm)]
         assert_allclose(cgtm, g_d.coarse_grained_transition_matrix)
 
+        ms, md = g_s.memberships, g_d.memberships
+        ms = ms[:, _find_permutation(md, ms)]
+
+        assert_allclose(ms, md)
+
+    def test_memberships_normal_case_sparse_vs_dense(
+            self,
+            P: np.ndarray,
+            sd: np.ndarray,
+            count_sd: np.ndarray,
+    ):
+        assert_allclose(sd, count_sd)  # sanity check
+
+        g_d = GPCCA(P, eta=sd)
+        g_d.optimize((2, 10))
+
+        g_s = GPCCA(csr_matrix(P), eta=sd, method="krylov")
+        g_s.optimize((2, 10))
+
+        # also passes without this
+        ms, md = g_s.memberships, g_d.memberships
+        ms = ms[:, _find_permutation(md, ms)]
+
+        assert_allclose(ms, md)
+
 
 class TestCustom:
     @pytest.mark.parametrize("method", ["krylov", "brandts"])
