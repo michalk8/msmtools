@@ -91,9 +91,13 @@ def count_A():
 
 @pytest.fixture(scope="session")
 def count_A_sparse():
-    return np.array([[0.28406323, 0.28756332, 0.42837345],
-           [-0.37903994, 0.33891752, 0.04012242],
-           [0.1996216, 0.27103713, -0.47065873]], dtype=np.float64)
+    return np.array(
+        [
+            [0.28406323, 0.28756332, 0.42837345],
+            [-0.37903994, 0.33891752, 0.04012242],
+            [0.1996216, 0.27103713, -0.47065873]
+        ], dtype=np.float64
+    )
 
 
 @pytest.fixture(scope="session")
@@ -1318,5 +1322,83 @@ def P_i(
     P_5: np.ndarray,
     P_6: np.ndarray,
     P_7: np.ndarray,
+) -> np.ndarray:
+    return locals()[request.param]
+
+
+@pytest.fixture(scope="session")
+def M_1() -> np.ndarray:
+    return np.array(
+        [
+            [2, -87, -20000, 10000],
+            [5, 2, -20000, -10000],
+            [0, 0, 1, -11],
+            [0, 0, 37, 1],
+        ],
+        dtype=np.float64,
+    )
+
+
+@pytest.fixture(scope="session")
+def M_2() -> np.ndarray:
+    return np.array(
+        [
+            [1, -3, 3576, 4888],
+            [1, 1, -88, -1440],
+            [0, 0, 1.001, -3],
+            [0, 0, 1.001, 1.001],
+        ],
+        dtype=np.float64,
+    )
+
+
+@pytest.fixture(scope="session")
+def M_3() -> np.ndarray:
+    return np.array(
+        [
+            [1, -100, 400, -1000],
+            [0.01, 1, 1200, -10],
+            [0, 0, 1.001, -0.01],
+            [0, 0, 100, 1.001],
+        ],
+        dtype=np.float64,
+    )
+
+
+@pytest.fixture(scope="session")
+def M_4() -> np.ndarray:
+    return np.array(
+        [
+            [1, -1e4, 8812, 4566],
+            [1e-4, 1, -9, 1200],
+            [0, 0, 1e-5 + 1, -1e-4],
+            [0, 0, 1e4, 1e-5 + 1],
+        ],
+        dtype=np.float64,
+    )
+
+
+@pytest.fixture(scope="session")
+def M_5() -> np.ndarray:
+    return np.array(
+        [
+            [1, -11, -20000, 10000],
+            [37, 1, -20000, -10000],
+            [0, 0, 2, -87],
+            [0, 0, 5, 2],
+        ],
+        dtype=np.float64,
+    )
+
+
+# "meta"-fixture
+@pytest.fixture(params=[f"M_{i}" for i in range(1, 6)])
+def R_i(
+        request,
+        M_1: np.ndarray,
+        M_2: np.ndarray,
+        M_3: np.ndarray,
+        M_4: np.ndarray,
+        M_5: np.ndarray,
 ) -> np.ndarray:
     return locals()[request.param]

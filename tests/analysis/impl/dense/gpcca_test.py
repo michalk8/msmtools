@@ -3,12 +3,15 @@ import numpy as np
 
 from scipy.linalg import hilbert, pinv, subspace_angles, lu
 from scipy.sparse import csr_matrix, issparse
+from scipy.sparse.linalg import eigs
+
 from typing import Optional
 from operator import itemgetter
 
 from tests.get_input import get_known_input, mu
 from tests.numeric import assert_allclose
 from tests.conftest import skip_if_no_petsc_slepc
+from msmtools.util.sort_real_schur import sort_real_schur
 from msmtools.analysis.dense.gpcca import (
     GPCCA,
     gpcca_coarsegrain,
@@ -529,6 +532,24 @@ class TestGPCCAMatlabUnit:
             match=r"Sparse implementation is only avaiable for `method='krylov'`, densifying.",
         ):
             GPCCA(csr_matrix(P), eta=sd, method="brandts").optimize(3)
+
+    def test_sort_real_schur(self, R_i: np.ndarray):
+        # test_SRSchur_num_t
+        Q = np.eye(4)
+        QQ, RR, ap = sort_real_schur(Q, R_i, z="LM", b=0)
+
+        assert np.all(np.array(ap) <= 1), ap
+
+        EQ = np.true_divide(np.linalg.norm(Q - QQ.T @ QQ, ord=1), eps)
+        assert_allclose(EQ, 1.0, atol=5)
+
+        EA = np.true_divide(np.linalg.norm(R_i - QQ @ RR @ QQ.T, ord=1), eps * np.linalg.norm(R_i, ord=1))
+        assert_allclose(EA, 1.0, atol=5)
+
+        l = eigs(R_i, k=4, which="SM", return_eigenvectors=False)
+        ll = eigs(RR, k=4, which="SM", return_eigenvectors=False)
+        EL = np.true_divide(np.abs(l - ll), eps * np.abs(l))
+        assert_allclose(EL, 1.0, atol=5)
 
 
 @skip_if_no_petsc_slepc
