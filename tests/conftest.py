@@ -659,7 +659,7 @@ def svecs_mu1000():
 
 @pytest.fixture(scope="session")
 def chi_isa_mu0_n3():
-    res = np.array(
+    return np.array(
         [
             [
                 3.1115284081507055e-02,
@@ -705,8 +705,6 @@ def chi_isa_mu0_n3():
         ],
         dtype=np.float64,
     )
-
-    return np.c_[res[:, 0], res[:, 2], res[:, 1]]
 
 
 @pytest.fixture(scope="session")

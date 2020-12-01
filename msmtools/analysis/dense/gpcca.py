@@ -413,11 +413,12 @@ def _indexsearch(X):
                          + str(n) + " data vectors.")
     # Check if the first, and only the first eigenvector is constant.
     diffs = np.abs(np.max(X, axis=0) - np.min(X, axis=0))
-    if not (diffs[0] < 1e-6):
-        raise ValueError("First Schur vector is not constant. This indicates that the Schur vectors "
+    if not np.isclose(1.0 + diffs[0], 1.0, rtol=1e-6):
+        raise ValueError("First Schur vector is not constant 1. This indicates that the Schur vectors "
                          + "are incorrectly sorted. Cannot search for a simplex structure in the data.")
-    if not (diffs[1] > 1e-6):
-        raise ValueError("A Schur vector after the first one is constant. Probably the Schur vectors "
+    if not np.all(diffs[1:] > 1e-6):
+        which = np.sum(diffs[1:] <= 1e-6)
+        raise ValueError(f"{which} Schur vector(s) after the first one are constant. Probably the Schur vectors "
                          + "are incorrectly sorted. Cannot search for a simplex structure in the data.")
 
     # local copy of the eigenvectors
@@ -498,6 +499,8 @@ def _opt_soft(X, rot_matrix):
         raise ValueError("The dimensions of the rotation matrix don't match with the number of Schur vectors.")
     if rot_matrix.shape[0] < 2:
         raise ValueError(f"Expected the rotation matrix to be at least of shape (2, 2), found {rot_matrix.shape}.")
+    if n == m:
+        raise ValueError(f"There is no point in clustering {n} points into {m} clusters.")
 
     # Reduce optimization problem to size (m-1)^2 by cropping the first row and first column from rot_matrix
     rot_crop_matrix = rot_matrix[1:,1:]

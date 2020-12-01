@@ -228,7 +228,7 @@ class TestGPCCAMatlabUnit:
 
         with pytest.raises(
             ValueError,
-            match=r"First Schur vector is not constant. "
+            match=r"First Schur vector is not constant 1. "
             r"This indicates that the Schur vectors are incorrectly sorted. "
             r"Cannot search for a simplex structure in the data.",
         ):
@@ -250,7 +250,7 @@ class TestGPCCAMatlabUnit:
 
         with pytest.raises(
             ValueError,
-            match=r"First Schur vector is not constant. "
+            match=r"First Schur vector is not constant 1. "
             r"This indicates that the Schur vectors are incorrectly sorted. "
             r"Cannot search for a simplex structure in the data.",
         ):
@@ -272,18 +272,19 @@ class TestGPCCAMatlabUnit:
         X[0, 0] = 1.0
         with pytest.raises(
             ValueError,
-            match="First Schur vector is not constant. This indicates that the Schur vectors are incorrectly sorted. "
+            match="First Schur vector is not constant 1. This indicates that the Schur vectors are incorrectly sorted. "
             "Cannot search for a simplex structure in the data.",
         ):
             _initialize_rot_matrix(X)
 
-    def test_initialize_A_second_is_constant(self):
+    def test_initialize_A_second_and_rest_are_constant(self):
         X = np.zeros((3, 3))
         X[:, 0] = 1.0
+        X[:, 2] = 2
         with pytest.raises(
             ValueError,
-            match="A Schur vector after the first one is constant. Probably the Schur vectors are incorrectly sorted. "
-            "Cannot search for a simplex structure in the data.",
+            match="2 Schur vector\(s\) after the first one are constant. Probably the Schur vectors are incorrectly "
+            "sorted. Cannot search for a simplex structure in the data.",
         ):
             _initialize_rot_matrix(X)
 
@@ -427,14 +428,13 @@ class TestGPCCAMatlabUnit:
         ):
             _indexsearch(scvecs)
 
-    @pytest.mark.skip(reason="No check in that function.")
     def test_opt_soft_shape_error_5(self):
         # test assertion for schur vector (N,k)-matrix with k=N
         A = np.zeros((4, 4), dtype=np.float64)
         scvecs = np.zeros((4, 4))
         scvecs[:, 0] = 1.0
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=rf"There is no point in clustering {A.shape[0]} points into {A.shape[1]} clusters."):
             _opt_soft(scvecs, A)
 
     def test_opt_soft_nelder_mead_mu0(self, svecs_mu0: np.ndarray, A_mu0: np.ndarray):
@@ -480,7 +480,7 @@ class TestGPCCAMatlabUnit:
 
         with pytest.raises(
             ValueError,
-            match="First Schur vector is not constant. This indicates that the Schur vectors are incorrectly sorted. "
+            match="First Schur vector is not constant 1. This indicates that the Schur vectors are incorrectly sorted. "
             "Cannot search for a simplex structure in the data",
         ):
             _cluster_by_isa(svecs)
@@ -543,7 +543,10 @@ class TestGPCCAMatlabUnit:
         EQ = np.true_divide(np.linalg.norm(Q - QQ.T @ QQ, ord=1), eps)
         assert_allclose(EQ, 1.0, atol=5)
 
-        EA = np.true_divide(np.linalg.norm(R_i - QQ @ RR @ QQ.T, ord=1), eps * np.linalg.norm(R_i, ord=1))
+        EA = np.true_divide(
+            np.linalg.norm(R_i - QQ @ RR @ QQ.T, ord=1),
+            eps * np.linalg.norm(R_i, ord=1),
+        )
         assert_allclose(EA, 1.0, atol=5)
 
         l = eigs(R_i, k=4, which="SM", return_eigenvectors=False)
@@ -658,10 +661,10 @@ class TestPETScSLEPc:
         assert_allclose(ms, md)
 
     def test_memberships_normal_case_sparse_vs_dense(
-            self,
-            P: np.ndarray,
-            sd: np.ndarray,
-            count_sd: np.ndarray,
+        self,
+        P: np.ndarray,
+        sd: np.ndarray,
+        count_sd: np.ndarray,
     ):
         assert_allclose(sd, count_sd)  # sanity check
 
