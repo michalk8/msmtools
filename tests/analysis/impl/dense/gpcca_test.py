@@ -592,6 +592,7 @@ class TestPETScSLEPc:
         count_sd: np.ndarray,
         count_Pc: np.ndarray,
         count_A_sparse: np.ndarray,
+        count_chi: np.ndarray,
         count_chi_sparse: np.ndarray,
     ):
         assert_allclose(sd, count_sd)
@@ -608,10 +609,14 @@ class TestPETScSLEPc:
 
         assert_allclose(g.rotation_matrix, count_A_sparse, atol=eps)
 
-        # ground truth had to be regenerated
+        # regenerated ground truth memberships
         chi = g.memberships
         chi = chi[:, _find_permutation(count_chi_sparse, chi)]
         assert_allclose(chi, count_chi_sparse, atol=eps)
+
+        # ground truth memberships from matlab
+        chi = chi[:, _find_permutation(count_chi, chi)]
+        assert np.max(np.abs(chi - count_chi)) < 1e-4
 
     def test_coarse_grain_sparse(
         self, P: np.ndarray, sd: np.ndarray, count_Pc: np.ndarray
@@ -651,13 +656,14 @@ class TestPETScSLEPc:
         # check if they span the same subspace
         assert np.max(subspace_angles(X_b, X_k)) < eps
 
-        cgtm = g_s.coarse_grained_transition_matrix
-        cgtm = cgtm[:, _find_permutation(g_d.coarse_grained_transition_matrix, cgtm)]
-        assert_allclose(cgtm, g_d.coarse_grained_transition_matrix)
-
         ms, md = g_s.memberships, g_d.memberships
-        ms = ms[:, _find_permutation(md, ms)]
+        cs, cd = g_s.coarse_grained_transition_matrix, g_d.coarse_grained_transition_matrix
+        perm = _find_permutation(md, ms)
 
+        cs = cs[:, perm]
+        assert_allclose(cs, g_d.coarse_grained_transition_matrix)
+
+        ms = ms[:, perm]
         assert_allclose(ms, md)
 
     def test_memberships_normal_case_sparse_vs_dense(
@@ -676,9 +682,12 @@ class TestPETScSLEPc:
 
         # also passes without this
         ms, md = g_s.memberships, g_d.memberships
-        ms = ms[:, _find_permutation(md, ms)]
+        cs, cd = g_s.coarse_grained_transition_matrix, g_d.coarse_grained_transition_matrix
+        perm = _find_permutation(md, ms)
+        ms = ms[:, perm]
 
         assert_allclose(ms, md)
+        assert_allclose(cs, cd)
 
 
 class TestCustom:
