@@ -3,7 +3,7 @@ import numpy as np
 
 from scipy.linalg import hilbert, pinv, subspace_angles, lu
 from scipy.sparse import csr_matrix, issparse
-from scipy.sparse.linalg import eigs
+from scipy.linalg import eigvals
 
 from typing import Optional
 from operator import itemgetter
@@ -534,6 +534,10 @@ class TestGPCCAMatlabUnit:
             GPCCA(csr_matrix(P), eta=sd, method="brandts").optimize(3)
 
     def test_sort_real_schur(self, R_i: np.ndarray):
+
+        def sort_evals(e: np.ndarray, take: int = 4) -> np.ndarray:
+            return e[np.argsort(np.linalg.norm(np.c_[e.real, e.imag], axis=1))][:take]
+
         # test_SRSchur_num_t
         Q = np.eye(4)
         QQ, RR, ap = sort_real_schur(Q, R_i, z="LM", b=0)
@@ -549,8 +553,9 @@ class TestGPCCAMatlabUnit:
         )
         assert_allclose(EA, 1.0, atol=5)
 
-        l = eigs(R_i, k=4, which="SM", return_eigenvectors=False)
-        ll = eigs(RR, k=4, which="SM", return_eigenvectors=False)
+        l = sort_evals(eigvals(R_i))
+        ll = sort_evals(eigvals(RR))
+
         EL = np.true_divide(np.abs(l - ll), eps * np.abs(l))
         assert_allclose(EL, 1.0, atol=5)
 
