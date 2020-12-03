@@ -1,5 +1,6 @@
 import pytest
 import numpy as np
+from itertools import combinations
 
 from scipy.linalg import hilbert, pinv, subspace_angles, lu
 from scipy.sparse import csr_matrix, issparse
@@ -642,34 +643,49 @@ class TestPETScSLEPc:
     def test_gpcca_krylov_sparse_eq_dense(self, example_matrix_mu: np.ndarray):
         P, sd = get_known_input(example_matrix_mu)
 
-        # for 3 it's fine
         g_s = GPCCA(csr_matrix(P), eta=sd, method="krylov").optimize(4)
         g_d = GPCCA(P, eta=sd, method="krylov").optimize(4)
+        g_b = GPCCA(P, eta=sd, method="brandts").optimize(4)
 
         assert issparse(g_s.P)
         assert not issparse(g_d.P)
+        assert not issparse(g_b.P)
 
         assert_allclose(g_s.memberships.sum(1), 1.0)
         assert_allclose(g_d.memberships.sum(1), 1.0)
+        assert_allclose(g_b.memberships.sum(1), 1.0)
 
-        X_k, X_b = g_s.schur_vectors, g_d.schur_vectors
-        RR_k, RR_b = g_s.schur_matrix, g_d.schur_matrix
+        X_k, X_kd, X_b = g_s.schur_vectors, g_d.schur_vectors, g_b.schur_vectors
+        RR_k, RR_kd, RR_b = g_s.schur_matrix, g_d.schur_matrix, g_b.schur_matrix
 
         # check if it's a correct Schur form
-        _assert_schur(P, X_b, RR_b, N=None)
         _assert_schur(P, X_k, RR_k, N=None)
+        _assert_schur(P, X_kd, RR_kd, N=None)
+        _assert_schur(P, X_b, RR_b, N=None)
         # check if they span the same subspace
-        assert np.max(subspace_angles(X_b, X_k)) < eps
+        assert np.max(subspace_angles(X_k, X_kd)) < eps
+        assert np.max(subspace_angles(X_kd, X_b)) < eps
 
-        ms, md = g_s.memberships, g_d.memberships
-        cs, cd = g_s.coarse_grained_transition_matrix, g_d.coarse_grained_transition_matrix
-        perm = _find_permutation(md, ms)
+        ms, md, mb = g_s.memberships, g_d.memberships, g_b.memberships
+        cs, cd, cb = g_s.coarse_grained_transition_matrix, g_d.coarse_grained_transition_matrix, g_b.coarse_grained_transition_matrix
 
-        cs = cs[perm, :][:, perm]
-        assert_allclose(cs, g_d.coarse_grained_transition_matrix)
+        for l, r in combinations(["brandts", "dense_krylov", "sparse_krylov"], r=2):
+            ml, cl = locals()[f"m{l[0]}"], locals()[f"c{l[0]}"]
+            mr, cr = locals()[f"m{r[0]}"], locals()[f"c{r[0]}"]
 
-        ms = ms[:, perm]
-        assert_allclose(ms, md)
+            perm = _find_permutation(ml, mr)
+
+            mr = mr[:, perm]
+            try:
+                assert_allclose(mr, ml)
+            except Exception as e:
+                raise RuntimeError(f"Comparing: {l} and {r}.") from e
+
+            cr = cr[perm, :][:, perm]
+            try:
+                assert_allclose(cr, cl)
+            except Exception as e:
+                raise RuntimeError(f"Comparing: {l} and {r}.") from e
 
     def test_memberships_normal_case_sparse_vs_dense(
         self,
