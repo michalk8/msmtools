@@ -665,7 +665,7 @@ class TestPETScSLEPc:
         cs, cd = g_s.coarse_grained_transition_matrix, g_d.coarse_grained_transition_matrix
         perm = _find_permutation(md, ms)
 
-        cs = cs[:, perm]
+        cs = cs[perm, :][:, perm]
         assert_allclose(cs, g_d.coarse_grained_transition_matrix)
 
         ms = ms[:, perm]
@@ -689,9 +689,11 @@ class TestPETScSLEPc:
         ms, md = g_s.memberships, g_d.memberships
         cs, cd = g_s.coarse_grained_transition_matrix, g_d.coarse_grained_transition_matrix
         perm = _find_permutation(md, ms)
-        ms = ms[:, perm]
 
+        ms = ms[:, perm]
         assert_allclose(ms, md)
+
+        cs = cs[perm, :][:, perm]
         assert_allclose(cs, cd)
 
 
