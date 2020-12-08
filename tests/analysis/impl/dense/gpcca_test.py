@@ -739,3 +739,146 @@ class TestCustom:
             np.testing.assert_allclose(X[:, 0], 1.0)
 
             assert np.max(subspace_angles(P_i @ X, X @ RR)) < eps
+
+
+class TestFailing:
+    def test_gpcca_krylov_sparse_eq_dense_mu(self, example_matrix_mu: np.ndarray):
+        mu = int(example_matrix_mu[2, 4])
+        # mu=0, 10, 50, 100: n_c=3
+        # mu=200, 500: n_c=2
+        # mu=1000: n_c=5
+        if True:
+            OPT_CLUSTER = {0: 3, 10: 3, 50: 3, 100: 3,
+                           200: 2, 500: 2,
+                           1000: 5}[mu]
+        else:
+            OPT_CLUSTER = 4
+
+        P, sd = get_known_input(example_matrix_mu)
+
+        g_s = GPCCA(csr_matrix(P), eta=sd, method="krylov").optimize(OPT_CLUSTER)
+        g_d = GPCCA(P, eta=sd, method="krylov").optimize(OPT_CLUSTER)
+        g_b = GPCCA(P, eta=sd, method="brandts").optimize(OPT_CLUSTER)
+
+        assert issparse(g_s.P)
+        assert not issparse(g_d.P)
+        assert not issparse(g_b.P)
+
+        assert_allclose(g_s.memberships.sum(1), 1.0)
+        assert_allclose(g_d.memberships.sum(1), 1.0)
+        assert_allclose(g_b.memberships.sum(1), 1.0)
+
+        X_k, X_kd, X_b = g_s.schur_vectors, g_d.schur_vectors, g_b.schur_vectors
+        RR_k, RR_kd, RR_b = g_s.schur_matrix, g_d.schur_matrix, g_b.schur_matrix
+
+        # check if it's a correct Schur form
+        _assert_schur(P, X_k, RR_k, N=None)
+        _assert_schur(P, X_kd, RR_kd, N=None)
+        _assert_schur(P, X_b, RR_b, N=None)
+        # check if they span the same subspace
+        assert np.max(subspace_angles(X_k, X_kd)) < eps
+        assert np.max(subspace_angles(X_kd, X_b)) < eps
+
+        ms, md, mb = g_s.memberships, g_d.memberships, g_b.memberships
+        cs, cd, cb = g_s.coarse_grained_transition_matrix, g_d.coarse_grained_transition_matrix, g_b.coarse_grained_transition_matrix
+
+        for l, r in combinations(["brandts", "dense_krylov", "sparse_krylov"], r=2):
+            ml, cl = locals()[f"m{l[0]}"], locals()[f"c{l[0]}"]
+            mr, cr = locals()[f"m{r[0]}"], locals()[f"c{r[0]}"]
+
+            perm = _find_permutation(ml, mr)
+
+            mr = mr[:, perm]
+            from numpy.linalg import cond
+            try:
+                print("Condition number:", cond(P), "mu:", mu)
+                print(r)
+                for row in mr:
+                    for col in row:
+                        print(f"{col:.5f}", end=" ")
+                    print()
+                print("=" * 27)
+
+                print(l)
+                for row in ml:
+                    for col in row:
+                        print(f"{col:.5f}", end=" ")
+                    print()
+                print("=" * 27)
+                assert_allclose(mr, ml)
+                # raise RuntimeError("TEMP")
+            except Exception as e:
+                raise RuntimeError(f"Comparing: {l} and {r}.") from e
+
+            cr = cr[perm, :][:, perm]
+            try:
+                assert_allclose(cr, cl)
+            except Exception as e:
+                raise RuntimeError(f"Comparing: {l} and {r}.") from e
+
+    def test_gpcca_krylov_sparse_eq_dense_count(self, P: np.ndarray, sd: np.ndarray):
+        # all of them cluster optimally into 3 clusters
+        g_s = GPCCA(csr_matrix(P), eta=sd, method="krylov").optimize([2, 5])
+        g_d = GPCCA(P, eta=sd, method="krylov").optimize([2, 5])
+        g_b = GPCCA(P, eta=sd, method="brandts").optimize([2, 5])
+
+        assert issparse(g_s.P)
+        assert not issparse(g_d.P)
+        assert not issparse(g_b.P)
+
+        assert_allclose(g_s.memberships.sum(1), 1.0)
+        assert_allclose(g_d.memberships.sum(1), 1.0)
+        assert_allclose(g_b.memberships.sum(1), 1.0)
+
+        X_k, X_kd, X_b = g_s.schur_vectors, g_d.schur_vectors, g_b.schur_vectors
+        RR_k, RR_kd, RR_b = g_s.schur_matrix, g_d.schur_matrix, g_b.schur_matrix
+
+        # check if it's a correct Schur form
+        # _assert_schur(P, X_k, RR_k, N=None)
+        # _assert_schur(P, X_kd, RR_kd, N=None)
+        # TODO: both of them fail with max = 4.4058233043653416e-05
+        # TODO: but otherwise, all the below checks are fine
+        # TODO: eps = 2.220446049250313e-06
+        # assert np.all(np.abs(X @ RR - P @ X) < eps), np.abs(X @ RR - P @ X).max()
+
+        _assert_schur(P, X_b, RR_b, N=None)
+        # check if they span the same subspace
+        assert np.max(subspace_angles(X_k, X_kd)) < eps
+        assert np.max(subspace_angles(X_kd, X_b)) < eps
+
+        ms, md, mb = g_s.memberships, g_d.memberships, g_b.memberships
+        cs, cd, cb = g_s.coarse_grained_transition_matrix, g_d.coarse_grained_transition_matrix, g_b.coarse_grained_transition_matrix
+
+        for l, r in combinations(["brandts", "dense_krylov", "sparse_krylov"], r=2):
+            ml, cl = locals()[f"m{l[0]}"], locals()[f"c{l[0]}"]
+            mr, cr = locals()[f"m{r[0]}"], locals()[f"c{r[0]}"]
+
+            perm = _find_permutation(ml, mr)
+
+            mr = mr[:, perm]
+            from numpy.linalg import cond
+            try:
+                print("Condition number:", cond(P))
+                print(r)
+                for row in mr:
+                    for col in row:
+                        print(f"{col:.5f}", end=" ")
+                    print()
+                print("=" * 27)
+
+                print(l)
+                for row in ml:
+                    for col in row:
+                        print(f"{col:.5f}", end=" ")
+                    print()
+                print("=" * 27)
+                assert_allclose(mr, ml)
+                # raise RuntimeError("TEMP")
+            except Exception as e:
+                raise RuntimeError(f"Comparing: {l} and {r}.") from e
+
+            cr = cr[perm, :][:, perm]
+            try:
+                assert_allclose(cr, cl)
+            except Exception as e:
+                raise RuntimeError(f"Comparing: {l} and {r}.") from e
