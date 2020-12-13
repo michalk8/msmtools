@@ -650,10 +650,7 @@ class TestPETScSLEPc:
         assert_allclose(Pc_k, Pc_b)
 
     def test_memberships_normal_case_sparse_vs_dense(
-        self,
-        P: np.ndarray,
-        sd: np.ndarray,
-        count_sd: np.ndarray,
+        self, P: np.ndarray, sd: np.ndarray, count_sd: np.ndarray,
     ):
         assert_allclose(sd, count_sd)  # sanity check
 
@@ -677,37 +674,6 @@ class TestPETScSLEPc:
         cs = cs[perm, :][:, perm]
         assert_allclose(cs, cd)
 
-
-class TestCustom:
-    @pytest.mark.parametrize("method", ["krylov", "brandts"])
-    def test_P_i(self, P_i: np.ndarray, method: str):
-        if method == "krylov":
-            pytest.importorskip("mpi4py")
-            pytest.importorskip("petsc4py")
-            pytest.importorskip("slepc4py")
-
-        g = GPCCA(P_i, eta=None, method=method)
-
-        for m in range(2, 8):
-            try:
-                g.optimize(m)
-            except ValueError:
-                continue
-
-            X, RR = g.schur_vectors, g.schur_matrix
-
-            assert_allclose(g.memberships.sum(1), 1.0)
-            assert_allclose(g.coarse_grained_transition_matrix.sum(1), 1.0)
-            assert_allclose(g.coarse_grained_input_distribution.sum(), 1.0)
-            if g.coarse_grained_stationary_probability is not None:
-                assert_allclose(g.coarse_grained_stationary_probability.sum(), 1.0)
-            np.testing.assert_allclose(X[:, 0], 1.0)
-
-            assert np.max(subspace_angles(P_i @ X, X @ RR)) < eps
-
-
-# TODO: no longer failing, move them
-class TestFailing:
     def test_gpcca_krylov_sparse_eq_dense_mu(self, example_matrix_mu: np.ndarray):
         mu = int(example_matrix_mu[2, 4])
         if mu == 1000:
@@ -753,27 +719,7 @@ class TestFailing:
             perm = _find_permutation(ml, mr)
 
             mr = mr[:, perm]
-            from numpy.linalg import cond
-
-            try:
-                print("Condition number:", cond(P), "mu:", mu)
-                print(r)
-                for row in mr:
-                    for col in row:
-                        print(f"{col:.5f}", end=" ")
-                    print()
-                print("=" * 27)
-
-                print(l)
-                for row in ml:
-                    for col in row:
-                        print(f"{col:.5f}", end=" ")
-                    print()
-                print("=" * 27)
-                assert_allclose(mr, ml, atol=1e-4)
-                # raise RuntimeError("TEMP")
-            except Exception as e:
-                raise RuntimeError(f"Comparing: {l} and {r}.") from e
+            assert_allclose(mr, ml, atol=1e-4)
 
             cr = cr[perm, :][:, perm]
             try:
@@ -820,30 +766,38 @@ class TestFailing:
             perm = _find_permutation(ml, mr)
 
             mr = mr[:, perm]
-            from numpy.linalg import cond
-
-            try:
-                print("Condition number:", cond(P))
-                print(r)
-                for row in mr:
-                    for col in row:
-                        print(f"{col:.5f}", end=" ")
-                    print()
-                print("=" * 27)
-
-                print(l)
-                for row in ml:
-                    for col in row:
-                        print(f"{col:.5f}", end=" ")
-                    print()
-                print("=" * 27)
-                assert_allclose(mr, ml)
-                # raise RuntimeError("TEMP")
-            except Exception as e:
-                raise RuntimeError(f"Comparing: {l} and {r}.") from e
+            assert_allclose(mr, ml)
 
             cr = cr[perm, :][:, perm]
             try:
                 assert_allclose(cr, cl)
             except Exception as e:
                 raise RuntimeError(f"Comparing: {l} and {r}.") from e
+
+
+class TestCustom:
+    @pytest.mark.parametrize("method", ["krylov", "brandts"])
+    def test_P_i(self, P_i: np.ndarray, method: str):
+        if method == "krylov":
+            pytest.importorskip("mpi4py")
+            pytest.importorskip("petsc4py")
+            pytest.importorskip("slepc4py")
+
+        g = GPCCA(P_i, eta=None, method=method)
+
+        for m in range(2, 8):
+            try:
+                g.optimize(m)
+            except ValueError:
+                continue
+
+            X, RR = g.schur_vectors, g.schur_matrix
+
+            assert_allclose(g.memberships.sum(1), 1.0)
+            assert_allclose(g.coarse_grained_transition_matrix.sum(1), 1.0)
+            assert_allclose(g.coarse_grained_input_distribution.sum(), 1.0)
+            if g.coarse_grained_stationary_probability is not None:
+                assert_allclose(g.coarse_grained_stationary_probability.sum(), 1.0)
+            np.testing.assert_allclose(X[:, 0], 1.0)
+
+            assert np.max(subspace_angles(P_i @ X, X @ RR)) < eps
