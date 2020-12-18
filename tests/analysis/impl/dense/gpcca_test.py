@@ -16,6 +16,7 @@ from msmtools.util.sort_real_schur import sort_real_schur
 from msmtools.analysis.dense.gpcca import (
     GPCCA,
     gpcca_coarsegrain,
+    _gpcca_core,
     _do_schur,
     _fill_matrix,
     _gram_schmidt_mod,
@@ -121,7 +122,6 @@ class TestGPCCAMatlabRegression:
         sd: np.ndarray,
         count_sd: np.ndarray,
         count_Pc: np.ndarray,
-        count_A: np.ndarray,
         count_chi: np.ndarray,
     ):
         assert_allclose(sd, count_sd)
@@ -135,10 +135,6 @@ class TestGPCCAMatlabRegression:
         assert_allclose(Pc.sum(1), 1.0)
         assert_allclose(g.coarse_grained_transition_matrix.sum(1), 1.0)
         assert_allclose(g.memberships.sum(1), 1.0)
-
-        # E       Max absolute difference: 3.17714693e-05
-        # E       Max relative difference: 0.000226
-        assert_allclose(g.rotation_matrix, count_A, atol=1e-4, rtol=1e-3)
 
         assert np.max(subspace_angles(g.memberships, count_chi)) < eps
 
@@ -606,7 +602,6 @@ class TestPETScSLEPc:
         sd: np.ndarray,
         count_sd: np.ndarray,
         count_Pc: np.ndarray,
-        count_A_sparse: np.ndarray,
         count_chi: np.ndarray,
         count_chi_sparse: np.ndarray,
     ):
@@ -621,8 +616,6 @@ class TestPETScSLEPc:
         assert_allclose(Pc.sum(1), 1.0)
         assert_allclose(g.coarse_grained_transition_matrix.sum(1), 1.0)
         assert_allclose(g.memberships.sum(1), 1.0)
-
-        assert_allclose(g.rotation_matrix, count_A_sparse, atol=eps)
 
         # regenerated ground truth memberships
         chi = g.memberships
@@ -773,6 +766,53 @@ class TestPETScSLEPc:
                 assert_allclose(cr, cl)
             except Exception as e:
                 raise RuntimeError(f"Comparing: {l} and {r}.") from e
+
+    def _generate_ground_truth_rot_matrices(self):
+        # this function generates the data for "test_init_final_rotation_matrix"
+        P, sd = get_known_input(mu(0))
+        g_ks = GPCCA(csr_matrix(P), method="krylov").optimize(3)
+        g_kd = GPCCA(P, method="krylov").optimize(3)
+
+        for g in [g_ks, g_kd]:
+            _sd = g.schur_vectors
+            _init_rot = _initialize_rot_matrix(sd)
+            _final_rot = g.rotation_matrix
+
+    def test_init_final_rotation_matrix(
+        self,
+        svecs_mu0: np.ndarray,
+        A_mu0_init: np.ndarray,
+        A_mu0: np.ndarray,
+        svecs_mu0_krylov_sparse: np.ndarray,
+        A_mu0_krylov_sparse_init: np.ndarray,
+        A_mu0_krylov_sparse: np.ndarray,
+        svecs_mu0_krylov_dense: np.ndarray,
+        A_mu0_krylov_dense_init: np.ndarray,
+        A_mu0_krylov_dense: np.ndarray,
+    ):
+        # brandts
+        init_rot = _initialize_rot_matrix(svecs_mu0)
+        _, final_rot, _ = _gpcca_core(svecs_mu0)
+
+        assert_allclose(init_rot, A_mu0_init)
+        assert_allclose(final_rot, A_mu0)
+
+        # krylov-sparse
+        init_rot = _initialize_rot_matrix(svecs_mu0_krylov_sparse)
+        _, final_rot, _ = _gpcca_core(svecs_mu0_krylov_sparse)
+
+        assert_allclose(init_rot, A_mu0_krylov_sparse_init)
+        assert_allclose(final_rot, A_mu0_krylov_sparse)
+
+        # krylov_dense
+        init_rot = _initialize_rot_matrix(svecs_mu0_krylov_dense)
+        _, final_rot, _ = _gpcca_core(svecs_mu0_krylov_dense)
+
+        assert_allclose(init_rot, A_mu0_krylov_dense_init)
+        assert_allclose(final_rot, A_mu0_krylov_dense)
+
+        # assert_allclose(A_mu0_init, A_mu0_krylov_sparse_init)
+        # assert_allclose(A_mu0_krylov_dense_init, A_mu0_krylov_sparse_init)
 
 
 class TestCustom:
