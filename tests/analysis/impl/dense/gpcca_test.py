@@ -138,6 +138,18 @@ class TestGPCCAMatlabRegression:
 
         assert np.max(subspace_angles(g.memberships, count_chi)) < eps
 
+    def test_init_final_rot_matrix_brandts(
+            self,
+            svecs_mu0: np.ndarray,
+            A_mu0_init: np.ndarray,
+            A_mu0: np.ndarray,
+    ):
+        init_rot = _initialize_rot_matrix(svecs_mu0)
+        _, final_rot, _ = _gpcca_core(svecs_mu0)
+
+        assert_allclose(init_rot, A_mu0_init)
+        assert_allclose(final_rot, A_mu0)
+
 
 class TestGPCCAMatlabUnit:
     def test_do_schur(self, example_matrix_mu: np.ndarray):
@@ -778,41 +790,29 @@ class TestPETScSLEPc:
             _init_rot = _initialize_rot_matrix(sd)
             _final_rot = g.rotation_matrix
 
-    def test_init_final_rotation_matrix(
+    def test_init_final_rot_matrix_krylov_sparse(
         self,
-        svecs_mu0: np.ndarray,
-        A_mu0_init: np.ndarray,
-        A_mu0: np.ndarray,
         svecs_mu0_krylov_sparse: np.ndarray,
         A_mu0_krylov_sparse_init: np.ndarray,
         A_mu0_krylov_sparse: np.ndarray,
-        svecs_mu0_krylov_dense: np.ndarray,
-        A_mu0_krylov_dense_init: np.ndarray,
-        A_mu0_krylov_dense: np.ndarray,
     ):
-        # brandts
-        init_rot = _initialize_rot_matrix(svecs_mu0)
-        _, final_rot, _ = _gpcca_core(svecs_mu0)
-
-        assert_allclose(init_rot, A_mu0_init)
-        assert_allclose(final_rot, A_mu0)
-
-        # krylov-sparse
         init_rot = _initialize_rot_matrix(svecs_mu0_krylov_sparse)
         _, final_rot, _ = _gpcca_core(svecs_mu0_krylov_sparse)
 
         assert_allclose(init_rot, A_mu0_krylov_sparse_init)
         assert_allclose(final_rot, A_mu0_krylov_sparse)
 
-        # krylov_dense
+    def test_init_final_rot_matrix_krylov_dense(
+        self,
+        svecs_mu0_krylov_dense: np.ndarray,
+        A_mu0_krylov_dense_init: np.ndarray,
+        A_mu0_krylov_dense: np.ndarray,
+    ):
         init_rot = _initialize_rot_matrix(svecs_mu0_krylov_dense)
         _, final_rot, _ = _gpcca_core(svecs_mu0_krylov_dense)
 
         assert_allclose(init_rot, A_mu0_krylov_dense_init)
         assert_allclose(final_rot, A_mu0_krylov_dense)
-
-        # assert_allclose(A_mu0_init, A_mu0_krylov_sparse_init)
-        # assert_allclose(A_mu0_krylov_dense_init, A_mu0_krylov_sparse_init)
 
 
 class TestCustom:
