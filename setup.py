@@ -53,15 +53,16 @@ def get_cmdclass():
         def build_extensions(self):
             # setup OpenMP support
             from setup_util import detect_openmp
+
             openmp_enabled, additional_libs = detect_openmp(self.compiler)
             if openmp_enabled:
-                warnings.warn('enabled openmp')
-                if sys.platform == 'darwin':
-                    omp_compiler_args = ['-fopenmp=libiomp5']
+                warnings.warn("enabled openmp")
+                if sys.platform == "darwin":
+                    omp_compiler_args = ["-fopenmp=libiomp5"]
                 else:
-                    omp_compiler_args = ['-fopenmp']
-                omp_libraries = ['-l%s' % l for l in additional_libs]
-                omp_defines = [('USE_OPENMP', None)]
+                    omp_compiler_args = ["-fopenmp"]
+                omp_libraries = ["-l%s" % l for l in additional_libs]
+                omp_defines = [("USE_OPENMP", None)]
                 for ext in self.extensions:
                     ext.extra_compile_args += omp_compiler_args
                     ext.extra_link_args += omp_libraries
@@ -70,56 +71,66 @@ def get_cmdclass():
             build_ext.build_extensions(self)
 
     cmd = versioneer.get_cmdclass()
-    cmd['build_ext'] = BuildExt
+    cmd["build_ext"] = BuildExt
     return cmd
 
 
 metadata = dict(
-    name='msmtools',
-    maintainer='Martin K. Scherer',
-    maintainer_email='m.scherer@fu-berlin.de',
-    author='Benjamin Trendelkamp-Schroer',
-    author_email='benjamin.trendelkamp-schroer@fu-berlin.de',
-    url='http://github.com/markovmodel/msmtools',
-    license='LGPLv3+',
+    name="msmtools",
+    maintainer="Martin K. Scherer",
+    maintainer_email="m.scherer@fu-berlin.de",
+    author="Benjamin Trendelkamp-Schroer",
+    author_email="benjamin.trendelkamp-schroer@fu-berlin.de",
+    url="http://github.com/markovmodel/msmtools",
+    license="LGPLv3+",
     description=DOCLINES[0],
-    long_description=open('README.rst').read(),
+    long_description=open("README.rst").read(),
     version=versioneer.get_version(),
     platforms=["Windows", "Linux", "Solaris", "Mac OS-X", "Unix"],
-    classifiers=[c for c in CLASSIFIERS.split('\n') if c],
-    keywords='Markov State Model Algorithms',
+    classifiers=[c for c in CLASSIFIERS.split("\n") if c],
+    keywords="Markov State Model Algorithms",
     # runtime dependencies
-    install_requires=['numpy>=1.6.0',
-                      'scipy>=0.11',
-                      'decorator',
-                      'future-fstrings',
-                      ],
-    setup_requires=['numpy', 'cython'],
+    install_requires=[
+        "numpy>=1.6.0",
+        "scipy>=0.11",
+        "decorator",
+        "future-fstrings",
+    ],
+    extra_require={"test": ["pytest>=6.0.0", "pytest-mock>=1.8.0"]},
+    setup_requires=["numpy", "cython"],
     zip_safe=False,
     cmdclass=get_cmdclass(),
 )
 
 
-def configuration(parent_package='', top_path=None):
+def configuration(parent_package="", top_path=None):
     from numpy.distutils.misc_util import Configuration
-    config = Configuration(None, '', top_path)
-    config.set_options(ignore_setup_xxx_py=True,
-                       assume_default_configuration=True,
-                       delegate_options_to_subpackages=True,
-                       # quiet=True,
-                       )
-    config.add_subpackage('msmtools')
+
+    config = Configuration(None, "", top_path)
+    config.set_options(
+        ignore_setup_xxx_py=True,
+        assume_default_configuration=True,
+        delegate_options_to_subpackages=True,
+        # quiet=True,
+    )
+    config.add_subpackage("msmtools")
     return config
 
 
 # not installing?
-if not(len(sys.argv) == 1 or (len(sys.argv) >= 2 and ('--help' in sys.argv[1:] or
-                                                  sys.argv[1] in ('--help-commands',
-                                                                  '--version',
-                                                                  'clean')))):
-    metadata['configuration'] = configuration
+if not (
+    len(sys.argv) == 1
+    or (
+        len(sys.argv) >= 2
+        and (
+            "--help" in sys.argv[1:]
+            or sys.argv[1] in ("--help-commands", "--version", "clean")
+        )
+    )
+):
+    metadata["configuration"] = configuration
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     from numpy.distutils.core import setup
-    setup(**metadata)
 
+    setup(**metadata)

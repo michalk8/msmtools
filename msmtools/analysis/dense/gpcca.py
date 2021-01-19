@@ -190,9 +190,9 @@ def _do_schur(P, eta, m, z='LM', method='brandts', tol_krylov=1e-16):
         
     R : ndarray (m,m)
         The ordered top left Schur form.
-        Only returned, if the chosen method is 
-        not the Krylov-Schur method.
-    
+
+    e: : ndarrray (m,)
+        Eigenvalues.
     """
     from scipy.linalg import subspace_angles
     from msmtools.util.sorted_schur import sorted_schur
@@ -222,11 +222,11 @@ def _do_schur(P, eta, m, z='LM', method='brandts', tol_krylov=1e-16):
 
     # Make a Schur decomposition of P_bar and sort the Schur vectors (and form).
     R, Q, eigenvalues = sorted_schur(P_bar, m, z, method, tol_krylov=tol_krylov) #Pbar!!!
-    
+
     # Orthonormalize the sorted Schur vectors Q via modified Gram-Schmidt-orthonormalization,
     # if the (Schur)vectors aren't orthogonal!
-    if not np.allclose(Q.T.dot(Q), np.eye(Q.shape[1]), rtol=1e6*eps, atol=1e6*eps):
-        warnings.warn("The Schur vectors aren't orthogonal so they are eta-orthonormalized.")
+    if not np.allclose(Q.T.dot(Q * eta[:, None]), np.eye(Q.shape[1]), rtol=1e6*eps, atol=1e6*eps):
+        warnings.warn("The Schur vectors aren't D-orthogonal so they are D-orthogonalized.")
         Q = _gram_schmidt_mod(Q, eta)
         # Transform the orthonormalized Schur vectors of P_bar back 
         # to orthonormalized Schur vectors X of P.
@@ -252,6 +252,10 @@ def _do_schur(P, eta, m, z='LM', method='brandts', tol_krylov=1e-16):
     if not X.shape[0] == N1:
         raise ValueError(f"The number of rows `n={X.shape[0]}` of the Schur vector matrix X doesn't match "
                          f"those `n={P.shape[0]}` of P.")
+    # Raise, if the first column X[:,0] of the Schur vector matrix isn't constantly equal 1!
+    if not np.allclose(X[:, 0], 1.0, atol=1e-8, rtol=1e-5):
+        raise ValueError("The first column X[:, 0] of the Schur vector matrix isn't constantly equal 1.")
+
     # Raise, if the (Schur)vectors aren't D-orthogonal (don't fullfill the orthogonality condition)!
     if not np.allclose(X.T.dot(X*eta[:, None]), np.eye(X.shape[1]), atol=1e-6, rtol=1e-5):
         print(X.T.dot(X*eta[:, None]))
@@ -266,17 +270,11 @@ def _do_schur(P, eta, m, z='LM', method='brandts', tol_krylov=1e-16):
     if not test:
         raise ValueError(f"According to scipy.linalg.subspace_angles() X isn't an invariant "
                          f"subspace of P, since the subspace angles between the column spaces "
-                         f"of P*X and X*R (resp. X, if you chose the Krylov-Schur method) "
-                         f"aren't near zero. The subspace angles are: `{dummy}`")
+                         f"of P*X and X*R aren't near zero. The subspace angles are: `{dummy}`")
     elif not test1:
         warnings.warn("According to scipy.linalg.subspace_angles() the dimension of the "
-                      "column spaces of P*X and/or X*R (resp. X, if you chose the "
-                      "Krylov-Schur method) is not equal to m.")
+                      "column spaces of P*X and/or X*R is not equal to m.")
 
-    # Raise, if the first column X[:,0] of the Schur vector matrix isn't constantly equal 1!
-    if not np.allclose(X[:, 0], 1.0, atol=1e-8, rtol=1e-5):
-        raise ValueError("The first column X[:, 0] of the Schur vector matrix isn't constantly equal 1.")
-                  
     return X, R, eigenvalues
 
 
@@ -409,17 +407,18 @@ def _indexsearch(X):
     n, m = X.shape
 
     # Sanity check.
-    if not (n >= m):
+    if n < m:
         raise ValueError("The Schur vector matrix of shape " + str(X.shape) + " has more columns "
                          + "than rows. You can't get a " + str(m) + "-dimensional simplex from " 
                          + str(n) + " data vectors.")
     # Check if the first, and only the first eigenvector is constant.
     diffs = np.abs(np.max(X, axis=0) - np.min(X, axis=0))
-    if not (diffs[0] < 1e-6):
-        raise ValueError("First Schur vector is not constant. This indicates that the Schur vectors "
+    if not np.isclose(1.0 + diffs[0], 1.0, rtol=1e-6):
+        raise ValueError("First Schur vector is not constant 1. This indicates that the Schur vectors "
                          + "are incorrectly sorted. Cannot search for a simplex structure in the data.")
-    if not (diffs[1] > 1e-6):
-        raise ValueError("A Schur vector after the first one is constant. Probably the Schur vectors "
+    if not np.all(diffs[1:] > 1e-6):
+        which = np.sum(diffs[1:] <= 1e-6)
+        raise ValueError(f"{which} Schur vector(s) after the first one are constant. Probably the Schur vectors "
                          + "are incorrectly sorted. Cannot search for a simplex structure in the data.")
 
     # local copy of the eigenvectors
@@ -498,8 +497,12 @@ def _opt_soft(X, rot_matrix):
         raise ValueError("Rotation matrix isn't quadratic.")
     if not (rot_matrix.shape[0] == m):
         raise ValueError("The dimensions of the rotation matrix don't match with the number of Schur vectors.")
-    
-    # Reduce optimization problem to size (m-1)^2 by croping the first row and first column from rot_matrix
+    if rot_matrix.shape[0] < 2:
+        raise ValueError(f"Expected the rotation matrix to be at least of shape (2, 2), found {rot_matrix.shape}.")
+    if n == m:
+        raise ValueError(f"There is no point in clustering {n} points into {m} clusters.")
+
+    # Reduce optimization problem to size (m-1)^2 by cropping the first row and first column from rot_matrix
     rot_crop_matrix = rot_matrix[1:,1:]
     
     # Now reshape rot_crop_matrix into a linear vector alpha.
@@ -735,12 +738,13 @@ def coarsegrain(P, eta, chi):
     ----------------------------------------------
     
     """
-    #Matlab: Pc = pinv(chi'*diag(eta)*chi)*(chi'*diag(eta)*P*chi)
+    # Matlab: Pc = pinv(chi'*diag(eta)*chi)*(chi'*diag(eta)*P*chi)
 
     # need to make sure here that memory does not explode, and P is never densified
-    W = np.linalg.pinv(chi.T.dot(chi*eta[:, None]))
-    V = chi.T*eta
-    if issparse(P): V = sp.csr_matrix(V)
+    W = np.linalg.pinv(chi.T.dot(chi * eta[:, None]))
+    V = chi.T * eta
+    if issparse(P):
+        V = sp.csr_matrix(V)
     A = V.dot(P).dot(chi)
 
     return W.dot(A)
@@ -761,14 +765,14 @@ def gpcca_coarsegrain(P, m, eta=None, z='LM', method='brandts'):
     ----------
     P : ndarray (n,n)
         Transition matrix (row-stochastic).
-        
-    eta : ndarray (n,) 
+
+    m : int, tuple[int, int]
+        Number of clusters to group into.
+
+    eta : ndarray (n,)
         Input (initial) distribution of states.
         In case of a reversible transition matrix, use the stationary distribution ``pi`` here.
 
-    m : int
-        Number of clusters to group into.
-        
     z : string, (default='LM')
         Specifies which portion of the eigenvalue spectrum of `P` 
         is to be sought. The invariant subspace of `P` that is  
@@ -794,7 +798,7 @@ def gpcca_coarsegrain(P, m, eta=None, z='LM', method='brandts'):
          Use with CAUTION! 
          ----------------------------------------------------
          To use this method you need to have petsc, petsc4py, 
-         selpc, and slepc4py installed. For optimal performance 
+         slepc, and slepc4py installed. For optimal performance
          it is highly recommended that you also have mpi 
          (at least version 2) and mpi4py installed.
 
@@ -819,19 +823,13 @@ def gpcca_coarsegrain(P, m, eta=None, z='LM', method='brandts'):
     ----------------------------------------------
     
     """                  
-    #Matlab: Pc = pinv(chi'*diag(eta)*chi)*(chi'*diag(eta)*P*chi)
+    # Matlab: Pc = pinv(chi'*diag(eta)*chi)*(chi'*diag(eta)*P*chi)
     if eta is None:
         eta = np.true_divide(np.ones(P.shape[0]), P.shape[0])
 
     chi = GPCCA(P, eta, z, method).optimize(m).memberships
-    W = np.linalg.pinv(np.dot(chi.T, np.diag(eta)).dot(chi))
-    #todo just change the computation of A to work correctly with sparse matrices
-    if issparse(P):
-        P = P.toarray()
-    A = np.dot(chi.T, np.diag(eta)).dot(P).dot(chi)
-    P_coarse = W.dot(A)
-                       
-    return P_coarse
+
+    return coarsegrain(P, eta=eta, chi=chi)
 
 
 class GPCCA(object):
@@ -880,11 +878,11 @@ class GPCCA(object):
          Use with CAUTION! 
          ----------------------------------------------------
          To use this method you need to have petsc, petsc4py, 
-         selpc, and slepc4py installed. For optimal performance 
+         slepc, and slepc4py installed. For optimal performance
          it is highly recommended that you also have mpi (at least 
          version 2) and mpi4py installed. The installation can be 
          a little tricky sometimes, but the following approach was 
-         successfull on Ubuntu 18.04:
+         successful on Ubuntu 18.04:
          ``sudo apt-get update & sudo apt-get upgrade``
          ``sudo apt-get install libopenmpi-dev``
          ``pip install --user mpi4py``
@@ -1123,7 +1121,12 @@ class GPCCA(object):
             raise ValueError(f"m_min ({m_min}) must be smaller than m_max ({m_max}).")
         if m_min in [0, 1]:
             raise ValueError(f"There is no point in clustering into `{m_min}` clusters.")
-        
+
+        if not isinstance(m_min, int):
+            raise TypeError(f"m_min is not an integer.")
+        if not isinstance(m_max, int):
+            raise TypeError(f"m_max is not an integer.")
+
         # Calculate Schur matrix R and Schur vector matrix X, if not adequately given.
         self._do_schur_helper(m_max)
     

@@ -274,7 +274,7 @@ def sorted_schur(P, m, z='LM', method='brandts', tol_krylov=1e-16):
             if not _no_slepc_error_msg_shown:
                 print(f"Unable to import PETSc or SLEPc.\n"
                       f"You can install it from: https://slepc4py.readthedocs.io/en/stable/install.html\n"
-                      f"Defaulting to `method='{_default_schur_method}'`.")
+                      f"Defaulting to `method={_default_schur_method!r}`.")
                 _no_slepc_error_msg_shown = True
             method = _default_schur_method
 
@@ -288,6 +288,8 @@ def sorted_schur(P, m, z='LM', method='brandts', tol_krylov=1e-16):
         k = m + 1
     elif m == n:
         k = m
+    else:
+        raise ValueError(f"Requested more groups ({m}) than states ({n}).")
 
     # compute the sorted schur decomposition
     if method == 'brandts':
@@ -298,10 +300,10 @@ def sorted_schur(P, m, z='LM', method='brandts', tol_krylov=1e-16):
         raise ValueError(f"Unknown method `{method!r}`.")
 
     # check for splitting pairs of complex conjugates
-    if (m < n):
+    if m < n:
         if _check_conj_split(eigenvalues[:m]):
             raise ValueError(f'Clustering into {m} clusters will split conjugate eigenvalues. '
-                             f'Request one cluster more or less. ')
+                             f'Request one cluster more or less.')
         Q, R, eigenvalues = Q[:, :m], R[:m, :m], eigenvalues[:m]
 
     # check the returned schur decomposition
