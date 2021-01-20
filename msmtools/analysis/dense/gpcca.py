@@ -1049,6 +1049,9 @@ class GPCCA(object):
         self.z = z
         self.method = method
 
+        self._pi = None
+        self._pi_coarse = None
+
     def _do_schur_helper(self, m):
         n = np.shape(self.P)[0]
         if self.X is not None and self.R is not None and self.eigenvalues is not None:
